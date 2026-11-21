@@ -104,14 +104,17 @@
 /* =========================================================
    Hero
    ========================================================= */
+/* Giant words are sized in CSS with container units, so there is no layout shift:
+   "ROADMAP" in Anton is 3.575em wide → 27.8cqi fills the content width exactly. */
+.hero > .wrap, .footer > .wrap:last-child { container-type: inline-size; }
 .hero {
-  --hs: var(--fs-hero);
+  --hs: clamp(40px, 27.8cqi, 340px);
   padding-top: clamp(12px, 2vw, 28px);
 }
 .hero-word {
   position: relative;
   z-index: 1;
-  font-size: var(--fs-hero);
+  font-size: var(--hs);
   text-align: center;
   white-space: nowrap;
 }
@@ -126,7 +129,7 @@
 .hero-panel {
   position: relative;
   z-index: 2;
-  margin-top: calc(var(--hs) * -0.46);
+  margin-top: calc(var(--hs) * -0.38);
   display: grid;
   grid-template-columns: 1fr minmax(210px, 300px) 1fr;
   grid-template-rows: 1fr auto;
@@ -164,8 +167,10 @@
   justify-content: space-between;
   gap: 6px;
   font-size: clamp(10px, 4.4cqi, 12.5px);
+  white-space: nowrap;
   color: var(--ink);
 }
+@container (max-width: 250px) { .cap-plus { display: none; } }
 .capsule-month {
   margin-top: 6cqi;
   font-size: 52cqi;
@@ -174,8 +179,8 @@
 .capsule-mascot {
   position: relative;
   z-index: 1;
-  width: 80cqi;
-  margin-top: -24cqi;
+  width: 94cqi;
+  margin-top: -26cqi;
 }
 .capsule-pct {
   margin-top: auto;
@@ -228,7 +233,8 @@
     padding: 0 20px 28px;
     justify-items: center;
   }
-  .capsule { grid-column: 1; grid-row: 1; justify-self: center; width: 70%; max-width: 300px; }
+  .hero-panel { margin-top: calc(var(--hs) * -0.3); }
+  .capsule { grid-column: 1; grid-row: 1; justify-self: center; width: 70%; max-width: 300px; margin-top: calc(var(--hs) * -0.12); }
   .hero-left { grid-column: 1; grid-row: 2; justify-items: center; text-align: center; }
   .hero-stats { grid-column: 1; grid-row: 3; justify-self: center; text-align: center; }
   .hero .vtext { display: none; }
@@ -626,7 +632,7 @@ code {
   margin-bottom: -.1em;
   text-align: center;
   white-space: nowrap;
-  font-size: 30vw;
+  font-size: 48.9cqi; /* "AIDEV" is 2.036em wide in Anton */
   line-height: .78;
 }
 @media (max-width: 767px) { .footer-text { text-align: left; } }

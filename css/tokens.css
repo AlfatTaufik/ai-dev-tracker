@@ -29,7 +29,7 @@
   --max: 1280px;
   --pad: max(5vw, 16px);
   --nav-h: 56px;
-  --section-y: clamp(72px, 10vw, 144px);
+  --section-y: clamp(56px, 7vw, 104px);
 
   /* Spacing scale */
   --s1: 4px;

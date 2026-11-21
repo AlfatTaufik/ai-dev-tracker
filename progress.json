@@ -1,0 +1,11 @@
+{
+  "done": {},
+  "custom": [],
+  "projects": {
+    "p1": { "status": "", "github": "", "demo": "", "notes": "", "desc": "" },
+    "p2": { "status": "", "github": "", "demo": "", "notes": "", "desc": "" },
+    "p3": { "status": "", "github": "", "demo": "", "notes": "", "desc": "" }
+  },
+  "log": [],
+  "updated": ""
+}

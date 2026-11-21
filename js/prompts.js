@@ -102,6 +102,6 @@ function setStatus(el, msg, isError = false) {
   if (!el) return;
   el.textContent = '';
   el.classList.toggle('is-error', isError);
-  // Re-set on the next frame so screen readers announce repeated messages.
-  requestAnimationFrame(() => { el.textContent = msg; });
+  // Re-set after a tick so screen readers announce repeated messages.
+  setTimeout(() => { el.textContent = msg; }, 30);
 }

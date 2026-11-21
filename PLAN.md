@@ -1,6 +1,6 @@
 # AI Dev Tracker: rebuild plan
 
-Status: **waiting for approval**. No code yet.
+Status: **approved and built** (2026-11-21). Kept for reference.
 
 The original `index.html` / `style.css` / `app.js` were not available, so this is a
 rebuild from scratch that follows `PROMPT-redesign.md`. The data format, localStorage

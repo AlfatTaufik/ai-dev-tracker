@@ -76,21 +76,6 @@ function selectMonth(id, focus = false) {
   if (focus) $(`tab-${id}`)?.focus();
 }
 
-// ---------- Fit text: giant words fill their container without wrapping ----------
-function fitText() {
-  document.querySelectorAll('.fit').forEach((el) => {
-    const inner = el.querySelector('.fit-inner');
-    const max = Number(el.dataset.max) || 2000;
-    el.style.fontSize = '100px';
-    const w = inner.getBoundingClientRect().width;
-    const avail = el.clientWidth;
-    if (!w || !avail) return;
-    const fs = Math.min(max, (100 * avail) / w) * 0.995;
-    el.style.fontSize = `${fs}px`;
-    if (el.id === 'hero-title') $('top').style.setProperty('--hs', `${fs}px`);
-  });
-}
-
 // ---------- Count-up (once, on load) ----------
 function countUp() {
   if (reduced()) return;
@@ -298,12 +283,6 @@ async function init() {
   if (!loadLocal()) await loadRepoFile();
   renderAll({ reset: true });
   countUp();
-
-  fitText();
-  document.fonts?.ready.then(fitText);
-  let raf = 0;
-  addEventListener('resize', () => { cancelAnimationFrame(raf); raf = requestAnimationFrame(fitText); });
-
   setupEvents();
   watchOtherTabs();
   document.documentElement.classList.add('is-ready');

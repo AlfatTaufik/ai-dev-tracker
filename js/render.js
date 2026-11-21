@@ -36,7 +36,7 @@ function renderHero(data) {
   $('cap-pct').innerHTML = num(t.pct);
   $('cap-sr').textContent = `Bulan aktif ${month.name}, ${month.phase}. Progres total ${t.pct} persen.`;
   $('hero-stats').innerHTML =
-    `( ${num(t.done)} DARI ${num(t.total)} TUGAS + ${num(Math.round(hours * 10) / 10, 1)} JAM MINGGU INI + ${num(projectsOnline(data))}/${P.length} PROYEK ONLINE )`;
+    `( ${num(t.done)} DARI ${t.total} TUGAS + ${num(Math.round(hours * 10) / 10, 1)} JAM MINGGU INI + ${projectsOnline(data)}/${P.length} PROYEK ONLINE )`;
 }
 
 // ---------- Bulan ini ----------

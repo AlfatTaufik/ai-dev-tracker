@@ -105,12 +105,24 @@ export function loadLocal() {
   }
 }
 
-/** View mode: localStorage is empty and progress.json exists in the repo. */
+/** True when data holds any progress at all. */
+export function hasProgress(d) {
+  return Object.keys(d.done).length > 0 || d.custom.length > 0 || d.log.length > 0
+    || Object.values(d.projects).some((p) => p.status || p.github || p.demo || p.notes || p.desc);
+}
+
+/**
+ * View mode: localStorage is empty and progress.json in the repo has progress.
+ * The repo ships an empty progress.json (so there is never a 404); replace it with
+ * your exported file to turn view mode on for visitors.
+ */
 export async function loadRepoFile() {
   try {
     const res = await fetch('progress.json', { cache: 'no-store' });
     if (!res.ok) return false;
-    store.data = norm(await res.json());
+    const data = norm(await res.json());
+    if (!hasProgress(data)) return false;
+    store.data = data;
     store.readOnly = true;
     store.source = 'file';
     return true;
