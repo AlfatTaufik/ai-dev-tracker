@@ -1,0 +1,291 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>AI Dev Tracker · Roadmap 6 bulan menuju AI developer</title>
+  <meta name="description" content="Tracker roadmap 6 bulan dari Python sampai LLM, sambil kuliah: checklist, grafik jaringan progres, portofolio, dan log belajar.">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#FFE01A">
+  <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;600&family=JetBrains+Mono:wght@500&display=swap">
+
+  <link rel="stylesheet" href="css/tokens.css">
+  <link rel="stylesheet" href="css/base.css">
+  <link rel="stylesheet" href="css/components.css">
+  <link rel="stylesheet" href="css/sections.css">
+  <script type="module" src="js/main.js"></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Lewati ke konten</a>
+
+  <!-- ===== Navbar ===== -->
+  <header class="nav" id="nav">
+    <div class="wrap nav-inner">
+      <a class="nav-brand label" href="#top">AIDEV.TRACKER</a>
+      <nav class="nav-links" aria-label="Navigasi utama">
+        <a class="label" href="#roadmap">( ROADMAP )</a>
+        <a class="label" href="#portofolio">( PORTOFOLIO )</a>
+        <a class="label" href="#log">( LOG )</a>
+        <a class="label" href="#data">( DATA )</a>
+      </nav>
+      <button class="nav-menu label" id="menu-open" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="menu">+ ( MENU )</button>
+    </div>
+  </header>
+
+  <dialog class="menu" id="menu" aria-label="Menu">
+    <div class="wrap menu-inner">
+      <div class="menu-top">
+        <span class="label">AIDEV.TRACKER</span>
+        <button class="nav-menu label" id="menu-close" type="button">× ( TUTUP )</button>
+      </div>
+      <nav class="menu-links" aria-label="Menu">
+        <a class="display" href="#top">Home</a>
+        <a class="display" href="#roadmap">Roadmap</a>
+        <a class="display" href="#portofolio">Portofolio</a>
+        <a class="display" href="#log">Log</a>
+        <a class="display" href="#data">Data</a>
+      </nav>
+      <p class="label menu-foot">+ ( 6 BULAN MENUJU AI DEVELOPER ) +</p>
+    </div>
+  </dialog>
+
+  <!-- ===== View mode bar ===== -->
+  <div class="viewbar on-ink" id="viewbar" hidden>
+    <div class="wrap viewbar-inner">
+      <p class="label">( MODE LIHAT ) + Progres dibaca dari progress.json di repo ini. Perubahan tidak disimpan.</p>
+      <button class="btn btn-yellow btn-sm" type="button" data-action="edit-here">Edit di browser ini</button>
+    </div>
+  </div>
+
+  <main id="main" tabindex="-1">
+
+    <!-- ===== Hero ===== -->
+    <section class="hero" id="top" aria-labelledby="hero-title">
+      <div class="wrap">
+        <h1 class="hero-word display fit" id="hero-title" data-max="340" aria-label="Roadmap AI Dev Tracker">
+          <span class="fit-inner" aria-hidden="true"><span class="ch" style="--i:0">R</span><span class="ch" style="--i:1">O</span><span class="ch" style="--i:2">A</span><span class="ch" style="--i:3">D</span><span class="ch" style="--i:4">M</span><span class="ch" style="--i:5">A</span><span class="ch" style="--i:6">P</span></span>
+        </h1>
+
+        <div class="hero-panel">
+          <p class="vtext vtext-left label" aria-hidden="true">( ROADMAP ) + ( AI ) + ( PORTOFOLIO ) +</p>
+          <p class="vtext vtext-right label" aria-hidden="true">( ROADMAP ) + ( AI ) + ( PORTOFOLIO ) +</p>
+
+          <div class="hero-left">
+            <p class="label hero-copy">+ ( ROADMAP 6 BULAN MENUJU AI DEVELOPER + DARI PYTHON SAMPAI LLM + SAMBIL KULIAH ) +</p>
+            <a class="btn" href="#roadmap" data-action="goto-month">Lanjutkan bulan ini <span class="arrow" aria-hidden="true">→</span></a>
+          </div>
+
+          <div class="capsule" id="capsule">
+            <div class="capsule-top label" aria-hidden="true">
+              <span>( BULAN AKTIF ) +</span>
+              <span id="cap-phase">( FASE 0 )</span>
+            </div>
+            <p class="capsule-month display" id="cap-month" aria-hidden="true">NOV</p>
+            <img class="mascot capsule-mascot" data-mascot alt="" width="400" height="400">
+            <p class="capsule-pct display" aria-hidden="true"><span id="cap-pct">0</span>%</p>
+            <p class="sr-only" id="cap-sr"></p>
+          </div>
+
+          <p class="label hero-stats" id="hero-stats"></p>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Marquee ===== -->
+    <div class="marquee" aria-hidden="true"><div class="marquee-track" id="marquee"></div></div>
+
+    <!-- ===== Bulan ini ===== -->
+    <section class="section now" id="bulan-ini" aria-labelledby="now-title">
+      <div class="wrap">
+        <div class="now-grid">
+          <div class="now-side now-left">
+            <div class="connector">
+              <span class="label">Target bulan ini</span>
+              <span class="line" aria-hidden="true"></span>
+              <a class="btn" href="#roadmap" data-action="goto-month">Lihat checklist</a>
+            </div>
+          </div>
+
+          <div class="now-stack">
+            <h2 class="display" id="now-title">
+              <span class="now-l1">Bulan ini</span>
+              <span class="now-l2" id="now-stage">Ujian dulu</span>
+            </h2>
+            <p class="display now-l3" aria-hidden="true">
+              <span>*(</span><span class="now-mascot"><img class="mascot" data-mascot alt="" width="400" height="400"></span><span>)</span>
+              <span class="now-count" id="now-count">0/0</span>
+            </p>
+            <p class="sr-only" id="now-count-sr"></p>
+          </div>
+
+          <div class="now-side now-right">
+            <div class="connector">
+              <a class="btn" href="#coach" data-action="goto-coach">AI coach</a>
+              <span class="line" aria-hidden="true"></span>
+              <span class="label">Salin prompt</span>
+            </div>
+          </div>
+        </div>
+
+        <p class="label now-meta" id="now-meta"></p>
+
+        <figure class="card card-paper nn-card">
+          <div class="nn" id="nn"></div>
+          <figcaption class="nn-legend label">
+            <span><i class="lg lg-done" aria-hidden="true"></i>Selesai</span>
+            <span><i class="lg" aria-hidden="true"></i>Belum</span>
+            <span><i class="lg lg-active" aria-hidden="true"></i>Bulan aktif</span>
+            <span class="edit-only">+ Klik simpul untuk mencentang</span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ===== Checklist ===== -->
+    <section class="section" id="roadmap" aria-labelledby="cl-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="sec-title display" id="cl-title">Checklist</h2>
+          <span class="sec-num label">( 01 )</span>
+        </div>
+
+        <div class="cl-grid">
+          <div class="card cl-card">
+            <div class="chips" id="chips" role="tablist" aria-label="Pilih bulan"></div>
+
+            <div class="cl-panel" id="cl-panel" role="tabpanel">
+              <div class="cl-head">
+                <h3 class="cl-month" id="cl-title-month"></h3>
+                <span class="label" id="cl-phase"></span>
+              </div>
+              <div class="bar" role="img"><i id="cl-bar"></i></div>
+              <ul class="tasks" id="tasks"></ul>
+
+              <form class="add-form edit-only" id="add-form" autocomplete="off">
+                <label class="sr-only" for="new-task">Tugas baru untuk bulan ini</label>
+                <input class="input input-pill" id="new-task" type="text" maxlength="200" placeholder="Tambah tugas sendiri…">
+                <button class="btn" type="submit">Tambah</button>
+              </form>
+            </div>
+          </div>
+
+          <aside class="card card-ink coach on-ink" id="coach" aria-labelledby="coach-title">
+            <div class="coach-head">
+              <h3 class="display coach-title" id="coach-title">AI coach</h3>
+              <span class="label coach-tag">( SALIN + TEMPEL )</span>
+            </div>
+            <p class="coach-text">Salin prompt berisi progres, tugas bulan ini, tugas yang tertinggal, dan jam belajarmu. Tempel ke ChatGPT, Claude, atau Gemini untuk dapat rencana 7 hari yang realistis di sela kuliah.</p>
+            <button class="btn btn-yellow" id="coach-copy" type="button" data-action="copy-coach">Salin prompt AI coach</button>
+            <p class="status" id="coach-status" aria-live="polite"></p>
+            <div class="fallback" id="coach-fallback" hidden>
+              <label class="field"><span>Prompt (salin manual)</span><textarea class="textarea" rows="9" readonly></textarea></label>
+            </div>
+            <img class="mascot coach-mascot" data-mascot alt="" width="400" height="400">
+          </aside>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Portfolio ===== -->
+    <section class="section pf" id="portofolio" aria-labelledby="pf-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="sec-title display" id="pf-title">Portofolio</h2>
+          <span class="sec-num label">( 02 )</span>
+        </div>
+        <div class="pf-grid" id="projects"></div>
+      </div>
+    </section>
+
+    <!-- ===== Log ===== -->
+    <section class="section log" id="log" aria-labelledby="log-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="sec-title display" id="log-title">Log belajar</h2>
+          <span class="sec-num label">( 03 )</span>
+        </div>
+
+        <div class="log-grid">
+          <div class="log-left">
+            <form class="card card-sm log-form edit-only" id="log-form" novalidate>
+              <label class="field"><span>Tanggal</span><input class="input" id="log-date" type="date" required></label>
+              <label class="field"><span>Menit</span><input class="input tnum" id="log-min" type="number" inputmode="numeric" min="1" max="1440" step="5" value="60" required></label>
+              <label class="field log-note-field"><span>Catatan</span><input class="input" id="log-note" type="text" maxlength="200" placeholder="Belajar apa hari ini?"></label>
+              <button class="btn" type="submit">Catat</button>
+              <p class="status log-status" id="log-status" aria-live="polite"></p>
+            </form>
+
+            <h3 class="label log-sub">( 10 ENTRI TERBARU )</h3>
+            <ul class="log-list" id="log-list"></ul>
+          </div>
+
+          <div class="log-right">
+            <div class="flower" id="flower"></div>
+            <div class="weeks-box">
+              <h3 class="label">( 8 MINGGU TERAKHIR ) + ( TARGET 8 J )</h3>
+              <ul class="weeks" id="weeks"></ul>
+            </div>
+            <p class="label muted" id="log-extra"></p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ===== Data ===== -->
+    <section class="section data" id="data" aria-labelledby="data-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <h2 class="sec-title display" id="data-title">Data</h2>
+          <span class="sec-num label">( 04 )</span>
+        </div>
+
+        <div class="card card-outline data-card">
+          <div class="data-text">
+            <p>Semua progres disimpan di <strong>browser ini</strong> (localStorage, kunci <code>aidev-tracker-v1</code>). Tidak ada server dan tidak ada akun. Ekspor ke <code>progress.json</code> untuk cadangan, atau taruh file itu di repo GitHub Pages supaya orang lain bisa melihat progresmu dalam mode lihat.</p>
+            <p class="label muted" id="data-updated"></p>
+          </div>
+
+          <div class="data-actions">
+            <button class="btn" type="button" data-action="export">Ekspor progress.json</button>
+            <button class="btn btn-secondary" type="button" data-action="import">Impor dari file</button>
+            <input type="file" id="import-file" accept="application/json,.json" hidden>
+            <button class="btn btn-danger edit-only" id="ask-clear" type="button" data-action="ask-clear">Hapus semua data</button>
+          </div>
+
+          <div class="confirm" id="confirm" role="group" aria-labelledby="confirm-text" hidden>
+            <p id="confirm-text"><strong>Hapus semua progres di browser ini?</strong> Tugas, proyek, dan log akan hilang dan tidak bisa dikembalikan. Ekspor dulu kalau ragu.</p>
+            <div class="confirm-actions">
+              <button class="btn btn-danger-solid" type="button" data-action="do-clear">Ya, hapus semua</button>
+              <button class="btn btn-secondary" id="confirm-cancel" type="button" data-action="cancel-clear">Batal</button>
+            </div>
+          </div>
+
+          <p class="status" id="data-status" aria-live="polite"></p>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ===== Footer ===== -->
+  <footer class="footer">
+    <div class="wrap footer-top">
+      <ul class="footer-links">
+        <li><a class="label" href="#top">HOME</a></li>
+        <li><a class="label" href="#roadmap">ROADMAP</a></li>
+        <li><a class="label" href="#portofolio">PORTOFOLIO</a></li>
+        <li><a class="label" href="#log">LOG</a></li>
+      </ul>
+      <p class="label footer-text">ROADMAP 6 BULAN MENUJU AI DEVELOPER. DIBANGUN SAMBIL KULIAH, SATU TUGAS SETIAP KALI.</p>
+    </div>
+    <div class="wrap">
+      <p class="footer-word display fit" aria-hidden="true"><span class="fit-inner">AIDEV</span></p>
+    </div>
+  </footer>
+
+  <div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

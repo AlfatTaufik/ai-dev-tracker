@@ -1,0 +1,50 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="400" height="400">
+  <!-- "Neuron" mascot: original artwork for AI Dev Tracker. Replace via MASCOT_SRC in js/data.js. -->
+  <style>
+    .eyes { transform-box: fill-box; transform-origin: center; animation: blink 5.5s infinite; }
+    @keyframes blink { 0%, 93%, 100% { transform: scaleY(1); } 95.5% { transform: scaleY(.1); } }
+    @media (prefers-reduced-motion: reduce) { .eyes { animation: none; } }
+  </style>
+  <defs>
+    <radialGradient id="body" cx="36%" cy="30%" r="75%">
+      <stop offset="0" stop-color="#3A3A3A"/>
+      <stop offset=".55" stop-color="#141414"/>
+      <stop offset="1" stop-color="#0B0B0B"/>
+    </radialGradient>
+  </defs>
+
+  <!-- dendrites -->
+  <g fill="none" stroke="#0B0B0B" stroke-width="13" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M70 66 L46 34 M54 45 L30 44"/>
+    <path d="M132 64 L152 30 M146 41 L170 36"/>
+    <path d="M48 120 L20 128"/>
+    <path d="M154 118 L182 108 M172 112 L184 132"/>
+    <path d="M118 162 L128 186"/>
+  </g>
+  <!-- synapse tips -->
+  <g fill="#0B0B0B">
+    <circle cx="46" cy="34" r="9"/>
+    <circle cx="30" cy="44" r="7"/>
+    <circle cx="170" cy="36" r="7"/>
+    <circle cx="20" cy="128" r="8"/>
+    <circle cx="182" cy="108" r="8"/>
+    <circle cx="184" cy="132" r="6"/>
+    <circle cx="128" cy="186" r="8"/>
+  </g>
+  <circle cx="152" cy="30" r="10" fill="#FFE01A" stroke="#0B0B0B" stroke-width="4"/>
+
+  <!-- body -->
+  <circle cx="100" cy="108" r="60" fill="url(#body)"/>
+
+  <!-- gloss, upper left -->
+  <ellipse cx="72" cy="76" rx="18" ry="9" fill="#FFFFFF" opacity=".28" transform="rotate(-38 72 76)"/>
+  <circle cx="60" cy="94" r="4" fill="#FFFFFF" opacity=".35"/>
+
+  <!-- eyes -->
+  <g class="eyes">
+    <ellipse cx="84" cy="108" rx="11" ry="14" fill="#FFFFFF"/>
+    <ellipse cx="120" cy="108" rx="11" ry="14" fill="#FFFFFF"/>
+    <circle cx="87" cy="111" r="5" fill="#0B0B0B"/>
+    <circle cx="123" cy="111" r="5" fill="#0B0B0B"/>
+  </g>
+</svg>
