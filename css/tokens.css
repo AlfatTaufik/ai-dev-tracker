@@ -1,0 +1,54 @@
+/* Design tokens: colors, type, spacing, radius. Light only by design. */
+:root {
+  color-scheme: light;
+
+  /* Colors */
+  --white:    #FFFFFF;
+  --paper:    #F2F2F2;  /* light grey section / card background */
+  --card:     #E6E6E6;  /* grey cards */
+  --ink:      #0B0B0B;  /* main black: text, buttons */
+  --yellow:   #FFE01A;  /* hero panel, done nodes, badges */
+  --red:      #E4202A;  /* accent for LARGE text only (>= 24px) */
+  --red-ink:  #B0001A;  /* dark red for SMALL text, also on yellow */
+  --grey:     #8A8A8A;  /* strokes, decoration (not small text) */
+  --grey-ink: #5E5E5E;  /* secondary small text: >= 4.5:1 on white, paper and card */
+  --line:     #CFCFCF;  /* hairlines */
+
+  /* Type */
+  --f-display: "Anton", Impact, "Arial Narrow", sans-serif;
+  --f-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+  --f-body:    "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+
+  --fs-hero: clamp(64px, 22vw, 340px);   /* refined by fitText() so it never wraps or overflows */
+  --fs-h2:   clamp(44px, 8vw, 120px);
+  --fs-num:  clamp(56px, 7vw, 96px);
+  --fs-label: 12.5px;
+  --fs-body: 16px;
+
+  /* Layout */
+  --max: 1280px;
+  --pad: max(5vw, 16px);
+  --nav-h: 56px;
+  --section-y: clamp(72px, 10vw, 144px);
+
+  /* Spacing scale */
+  --s1: 4px;
+  --s2: 8px;
+  --s3: 12px;
+  --s4: 16px;
+  --s5: 24px;
+  --s6: 32px;
+  --s7: 48px;
+  --s8: 64px;
+
+  /* Radius */
+  --r-xl: 32px;       /* large cards */
+  --r-lg: 24px;       /* small cards */
+  --r-capsule: 36px;  /* hero capsule */
+  --r-btn: 14px;      /* square-ish buttons */
+  --r-pill: 999px;    /* pills, chips */
+
+  /* Motion */
+  --ease: cubic-bezier(.2, .8, .2, 1);
+  --dur: 200ms;
+}
