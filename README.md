@@ -4,8 +4,17 @@ Tracker roadmap 6 bulan menuju AI developer, dari Python sampai LLM, sambil kuli
 Checklist per bulan, grafik jaringan progres, tiga proyek portofolio, log jam belajar,
 dan prompt AI coach yang tinggal disalin.
 
-HTML, CSS, dan JavaScript biasa (ES modules). Tanpa framework, tanpa build step, tanpa
-library JS. Data disimpan di browser (localStorage), jadi tidak ada server atau akun.
+HTML, CSS, dan JavaScript biasa (ES modules), tanpa build step. Data disimpan di browser
+(localStorage), jadi tidak ada server atau akun.
+
+Desainnya editorial gelap dengan satu aksen lime: jaringan saraf 3D yang bergerak di hero
+(simpul menyala saat tugas dicentang), smooth scroll, roadmap 7 fase yang di-scroll ke samping,
+daftar proyek dengan preview yang mengikuti kursor, dan footer yang terbuka seperti tirai.
+
+Library (dari CDN, opsional): [GSAP 3.12.5](https://gsap.com) + ScrollTrigger untuk animasi
+scroll, dan [Lenis 1.1.13](https://lenis.darkroom.engineering) untuk smooth scroll. Kalau CDN
+gagal dimuat atau pengguna memilih *reduced motion*, situs tetap jalan normal tanpa animasi.
+Font: Inter Tight, Instrument Serif, Geist Mono (Google Fonts).
 
 ## Menjalankan di komputer
 
@@ -21,18 +30,20 @@ langsung dengan dobel klik tidak akan jalan.
 ```
 index.html            markup semua section
 progress.json         data untuk mode lihat (default kosong, lihat di bawah)
-css/tokens.css        warna, font, spacing, radius
-css/base.css          reset, tipografi, utilitas, focus ring, reduced motion
-css/components.css    tombol, chip, kartu, input, checkbox, marquee, badge bunga, toast
-css/sections.css      layout navbar, hero, bulan ini, checklist, portofolio, log, data, footer
+css/tokens.css        warna (tema gelap, terang, lime), font, spacing, radius
+css/base.css          reset, tipografi, grain, focus ring, reduced motion
+css/components.css    tombol, CTA lingkaran, tab, checkbox, input, pill status, ticker, cursor, toast
+css/sections.css      nav, intro, hero, bulan ini, fase, checklist, portofolio, log, data, footer
 js/data.js            roadmap M, proyek P, status ST, target jam, MASCOT_SRC
 js/store.js           state, localStorage, norm(), ekspor/impor, mode lihat
 js/util.js            escape, tanggal, statistik turunan
 js/render.js          render semua section
-js/network.js         grafik jaringan SVG (klik, Enter/Spasi, panah)
+js/hero.js            jaringan saraf 3D di hero (canvas 2D, tanpa library)
+js/motion.js          Lenis + GSAP ScrollTrigger, intro, cursor, tombol magnetik, preview proyek
+js/network.js         grafik jaringan SVG yang bisa diklik (Enter/Spasi, panah)
 js/prompts.js         prompt AI coach + deskripsi proyek, salin dengan textarea cadangan
 js/main.js            inisialisasi dan event listener
-assets/mascot.svg     maskot default (neuron)
+assets/mascot.svg     maskot default (neuron), dipakai di kartu AI coach
 assets/favicon.svg
 ```
 
@@ -65,8 +76,8 @@ assets/favicon.svg
    export const MASCOT_SRC = 'assets/mascot.png';
    ```
 
-Semua maskot di halaman (kapsul hero, "Bulan ini", kartu AI coach) memakai satu konstanta
-itu. Maskot default `assets/mascot.svg` adalah gambar original.
+Maskot tampil sebagai avatar di kartu AI coach dan memakai konstanta itu. Maskot default
+`assets/mascot.svg` adalah gambar original.
 
 ## Deploy ke GitHub Pages
 
@@ -94,6 +105,8 @@ Dalam mode lihat, form edit, checkbox, dan tombol hapus disembunyikan. Tombol
 - Grafik jaringan: SVG belakang `role="img"` dengan ringkasan, simpul `role="button"`
   dengan `aria-pressed`. Tab masuk ke satu simpul, panah untuk pindah, Enter/Spasi untuk mencentang.
 - Tab bulan bisa dipindah dengan panah kiri/kanan, Home, dan End.
-- Semua animasi (huruf hero, count-up, marquee, badge, simpul) mati saat
-  `prefers-reduced-motion: reduce`.
-- Lighthouse (lokal): Accessibility 100, Best Practices 100, SEO 100, Performance 94–99.
+- Jaringan 3D di hero hanya dekorasi (`aria-hidden`). Versi yang bisa dipakai ada di checklist.
+- Saat `prefers-reduced-motion: reduce`: tanpa intro, smooth scroll, pin horizontal, cursor,
+  atau animasi. Semua konten langsung terlihat.
+- Custom cursor dan tombol magnetik hanya aktif di perangkat dengan mouse.
+- Lighthouse (lokal): Accessibility 100, Best Practices 100, SEO 100, Performance 94–98.
