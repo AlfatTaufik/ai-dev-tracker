@@ -1,54 +1,64 @@
-/* Design tokens: colors, type, spacing, radius. Light only by design. */
+/* Design tokens. Dark editorial theme with one acid accent.
+   Sections can flip to the light "bone" theme with .theme-light. */
 :root {
-  color-scheme: light;
+  color-scheme: dark;
 
-  /* Colors */
-  --white:    #FFFFFF;
-  --paper:    #F2F2F2;  /* light grey section / card background */
-  --card:     #E6E6E6;  /* grey cards */
-  --ink:      #0B0B0B;  /* main black: text, buttons */
-  --yellow:   #FFE01A;  /* hero panel, done nodes, badges */
-  --red:      #E4202A;  /* accent for LARGE text only (>= 24px) */
-  --red-ink:  #B0001A;  /* dark red for SMALL text, also on yellow */
-  --grey:     #8A8A8A;  /* strokes, decoration (not small text) */
-  --grey-ink: #5E5E5E;  /* secondary small text: >= 4.5:1 on white, paper and card */
-  --line:     #CFCFCF;  /* hairlines */
+  /* Raw palette */
+  --ink:    #0B0B0C;
+  --ink-2:  #121214;
+  --ink-3:  #1B1B1E;
+  --bone:   #EDEAE3;
+  --bone-2: #E2DED4;
+  --lime:   #D4FF3A;   /* the only accent: done nodes, highlights, CTA fills */
+  --danger: #FF7A6B;
+
+  /* Semantic (dark default) */
+  --bg:      var(--ink);
+  --fg:      var(--bone);
+  --mute:    #8E8C86;              /* 5.8:1 on ink */
+  --surface: var(--ink-2);
+  --surface-2: var(--ink-3);
+  --line:    rgba(237, 234, 227, .14);
+  --line-strong: rgba(237, 234, 227, .32);
+  --focus:   var(--lime);
 
   /* Type */
-  --f-display: "Anton", Impact, "Arial Narrow", sans-serif;
-  --f-mono:    "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
-  --f-body:    "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-sans:  "Inter Tight", "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-serif: "Instrument Serif", "Times New Roman", serif;
+  --f-mono:  "Geist Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
 
-  --fs-hero: clamp(64px, 22vw, 340px);   /* refined by fitText() so it never wraps or overflows */
-  --fs-h2:   clamp(44px, 8vw, 120px);
-  --fs-num:  clamp(56px, 7vw, 96px);
-  --fs-label: 12.5px;
-  --fs-body: 16px;
+  --fs-hero: clamp(52px, 10.4vw, 188px);
+  --fs-h2:   clamp(44px, 7.6vw, 136px);
+  --fs-h3:   clamp(26px, 3vw, 44px);
+  --fs-lead: clamp(26px, 3.6vw, 60px);
+  --fs-mono: 12px;
 
   /* Layout */
-  --max: 1280px;
-  --pad: max(5vw, 16px);
-  --nav-h: 56px;
-  --section-y: clamp(56px, 7vw, 104px);
-
-  /* Spacing scale */
-  --s1: 4px;
-  --s2: 8px;
-  --s3: 12px;
-  --s4: 16px;
-  --s5: 24px;
-  --s6: 32px;
-  --s7: 48px;
-  --s8: 64px;
+  --max: 1440px;
+  --pad: max(4vw, 16px);
+  --nav-h: 64px;
+  --section-y: clamp(80px, 9vw, 150px);
 
   /* Radius */
-  --r-xl: 32px;       /* large cards */
-  --r-lg: 24px;       /* small cards */
-  --r-capsule: 36px;  /* hero capsule */
-  --r-btn: 14px;      /* square-ish buttons */
-  --r-pill: 999px;    /* pills, chips */
+  --r-sm: 10px;
+  --r-md: 18px;
+  --r-lg: 28px;
+  --r-pill: 999px;
 
   /* Motion */
-  --ease: cubic-bezier(.2, .8, .2, 1);
-  --dur: 200ms;
+  --ease-out: cubic-bezier(.16, 1, .3, 1);
+  --ease-io:  cubic-bezier(.65, 0, .35, 1);
+  --dur: 450ms;
+}
+
+.theme-light {
+  color-scheme: light;
+  --bg:      var(--bone);
+  --fg:      var(--ink);
+  --mute:    #5F5D58;              /* 5.6:1 on bone */
+  --surface: var(--bone-2);
+  --surface-2: #D6D1C5;
+  --line:    rgba(11, 11, 12, .14);
+  --line-strong: rgba(11, 11, 12, .4);
+  --focus:   var(--ink);
 }
