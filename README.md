@@ -1,5 +1,7 @@
 # AI Dev Tracker
 
+**Live:** https://alfattaufik.github.io/ai-dev-tracker/
+
 Tracker roadmap 6 bulan menuju AI developer, dari Python sampai LLM, sambil kuliah.
 Checklist per bulan, grafik jaringan progres, habit tracker harian, tiga proyek portofolio,
 log jam belajar, dan prompt AI coach yang tinggal disalin.
@@ -15,6 +17,19 @@ Library (dari CDN, opsional): [GSAP 3.12.5](https://gsap.com) + ScrollTrigger un
 scroll, dan [Lenis 1.1.13](https://lenis.darkroom.engineering) untuk smooth scroll. Kalau CDN
 gagal dimuat atau pengguna memilih *reduced motion*, situs tetap jalan normal tanpa animasi.
 Font: Inter Tight, Instrument Serif, Geist Mono (Google Fonts).
+
+## Pasang di HP (PWA)
+
+Buka link live di HP, lalu:
+
+- **Android (Chrome):** buka section **Data** dan ketuk **Pasang di perangkat ini**, atau
+  menu ⋮ → **Tambahkan ke layar utama**.
+- **iPhone/iPad:** buka di Safari, ketuk **Bagikan**, lalu **Tambah ke Layar Utama**.
+
+Setelah dipasang, tracker terbuka seperti aplikasi dan tetap jalan tanpa internet
+(`sw.js` menyimpan semua file). Kalau ada versi baru di GitHub, versi itu dipakai saat online.
+Data tetap per perangkat: progres di HP dan di laptop tidak tersinkron otomatis. Pakai
+ekspor/impor `progress.json` untuk memindahkannya.
 
 ## Menjalankan di komputer
 
@@ -42,9 +57,12 @@ js/hero.js            jaringan saraf 3D di hero (canvas 2D, tanpa library)
 js/motion.js          Lenis + GSAP ScrollTrigger, intro, cursor, tombol magnetik, preview proyek
 js/network.js         grafik jaringan SVG yang bisa diklik (Enter/Spasi, panah)
 js/prompts.js         prompt AI coach + deskripsi proyek, salin dengan textarea cadangan
-js/main.js            inisialisasi dan event listener
+js/main.js            inisialisasi, event listener, tombol pasang PWA
+sw.js                 service worker (offline): file sendiri network first, CDN cache first
+manifest.webmanifest  nama aplikasi, ikon, warna, pintasan ke Kebiasaan dan Log
 assets/mascot.svg     maskot default (neuron), dipakai di kartu AI coach
 assets/favicon.svg
+assets/icon.svg       ikon aplikasi; icon-192.png, icon-512.png, apple-touch-icon.png dirender dari sini
 ```
 
 ## Data
