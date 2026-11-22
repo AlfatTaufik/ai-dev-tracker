@@ -9,7 +9,9 @@ import { initNetwork } from './network.js';
 import { initHero } from './hero.js';
 import { initMotion, scrollToEl, refresh, stopScroll, startScroll } from './motion.js';
 import { coachPrompt, descPrompt, copyText } from './prompts.js';
-import { startSync, onSync, connect, disconnect, syncNow } from './sync.js';
+import { startSync, onSync, connect, disconnect, syncNow, signIn, resetPassword, accountsEnabled } from './sync.js';
+import { preload as preloadAccount } from './account.js';
+import { initFocus } from './focus.js';
 import { activeMonth, monthProgress, todayStr, habitActive, habitsToday } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -181,6 +183,23 @@ function setupNav() {
   menu.addEventListener('click', (e) => { if (e.target.closest('a')) menu.close(); });
 }
 
+/**
+ * Add a study session to the log. Once the day's total reaches 30 minutes the
+ * "Belajar AI" habit is ticked for that day (so two short pomodoros count too).
+ * Returns false in view mode, else {tick}.
+ */
+function logSession(d, m, n) {
+  if (store.readOnly) return false;
+  const ai = store.data.habits.find((h) => h.id === 'h-ai');
+  const before = store.data.log.reduce((s, e) => (e.d === d ? s + e.m : s), 0);
+  const tick = !!ai && before + m >= HABIT_AI_MIN && habitActive(ai, d) && !ai.days.includes(d);
+  update((data) => {
+    data.log.push({ d, m: Math.round(m), n });
+    if (tick) setHabitDay(data, 'h-ai', d, true);
+  });
+  return { tick };
+}
+
 function setupLogForm() {
   const date = $('log-date');
   date.value = todayStr();
@@ -262,11 +281,27 @@ function setupEvents() {
         break;
       case 'install': install(); break;
       case 'sync-now': syncNow(); break;
-      case 'sync-off':
-        disconnect();
-        $('sync-status').textContent = 'Sinkron diputus di perangkat ini. Data tetap ada di sini dan di gist.';
-        $('sync-token').focus();
+      case 'sync-off': {
+        const wasAccount = connectedKind === 'account';
+        await disconnect();
+        syncMsg(wasAccount
+          ? 'Kamu sudah keluar. Progres tetap ada di browser ini dan di akunmu. Kalau ini bukan perangkatmu, hapus juga datanya lewat “Hapus semua data”.'
+          : 'Sinkron diputus di perangkat ini. Data tetap ada di sini dan di gist.');
+        (accountsEnabled ? $('acct-email') : $('sync-token')).focus();
         break;
+      }
+      case 'acct-google': accountSignIn('google', el); break;
+      case 'acct-reset': {
+        const email = $('acct-email').value.trim();
+        try {
+          await resetPassword(email);
+          syncMsg(`Link untuk membuat kata sandi baru dikirim ke ${email}. Cek juga folder spam.`);
+        } catch (err) {
+          syncMsg(err.message, true);
+          $('acct-email').focus();
+        }
+        break;
+      }
       case 'edit-here':
         editHere();
         toast('Mode edit — data disalin ke browser ini');
@@ -309,13 +344,8 @@ function setupEvents() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { status.textContent = 'Isi tanggal dulu.'; $('log-date').focus(); return; }
     if (d > todayStr()) { status.textContent = 'Tanggal tidak boleh di masa depan.'; $('log-date').focus(); return; }
     if (!Number.isFinite(m) || m < 1 || m > 1440) { status.textContent = 'Menit harus antara 1 dan 1440.'; $('log-min').focus(); return; }
-    // A long enough session also ticks the "Belajar AI" habit for that day.
+    const { tick } = logSession(d, m, n);
     const ai = store.data.habits.find((h) => h.id === 'h-ai');
-    const tick = ai && m >= HABIT_AI_MIN && habitActive(ai, d) && !ai.days.includes(d);
-    update((data) => {
-      data.log.push({ d, m: Math.round(m), n });
-      if (tick) setHabitDay(data, 'h-ai', d, true);
-    });
     status.classList.remove('is-error');
     status.textContent = `Tercatat: ${Math.round(m)} menit.${tick ? ` Kebiasaan “${ai.name}” ikut dicentang.` : ''}`;
     $('log-note').value = '';
@@ -369,49 +399,99 @@ function setupEvents() {
   });
 }
 
-// ---------- Sync between devices ----------
+// ---------- Account + sync between devices ----------
+let connectedKind = '';
+/** auto: the message only describes the sync state, and is cleared when that state passes. */
+function syncMsg(msg, isError = false, auto = false) {
+  const el = $('sync-status');
+  el.classList.toggle('is-error', isError);
+  el.textContent = msg;
+  el.dataset.auto = auto ? '1' : '';
+}
+
 function renderSync(s) {
-  const card = $('sync');
+  const card = $('akun');
+  connectedKind = s.state === 'off' ? '' : s.kind;
   card.dataset.state = s.state;
-  $('sync-off').hidden = s.state !== 'off' && s.state !== 'error'; // on error the form stays, to paste a new token
+  const isAccount = s.kind === 'account';
+  // On error the forms stay, so you can sign in again or paste a new token.
+  $('sync-off').hidden = s.state !== 'off' && s.state !== 'error';
   $('sync-on').hidden = s.state === 'off';
   const hm = (iso) => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')}`; };
   $('sync-state-text').textContent = {
-    off: 'Belum terhubung',
+    off: accountsEnabled ? 'Belum masuk' : 'Belum terhubung',
     idle: s.last ? `Tersinkron · ${hm(s.last)}` : 'Tersinkron',
-    busy: 'Menyinkronkan…',
+    busy: s.msg || 'Menyinkronkan…',
     offline: 'Offline · menunggu internet',
     error: 'Sinkron bermasalah',
   }[s.state];
-  const status = $('sync-status');
-  if (s.state === 'error' || s.state === 'offline') {
-    status.classList.toggle('is-error', s.state === 'error');
-    status.textContent = s.msg;
-  } else if (status.classList.contains('is-error')) {
-    status.classList.remove('is-error');
-    status.textContent = '';
-  }
+  const who = $('sync-who');
+  who.textContent = '';
+  if (isAccount) who.append('Masuk sebagai ', Object.assign(document.createElement('strong'), { textContent: s.email || 'akun Google' }), '.');
+  else who.textContent = 'Tersambung ke GitHub Gist.';
+  $('sync-off-btn').textContent = isAccount ? 'Keluar dari akun' : 'Putuskan di perangkat ini';
+  if (s.state === 'error' || s.state === 'offline') syncMsg(s.msg, s.state === 'error', true);
+  else if ($('sync-status').dataset.auto && s.state === 'idle') syncMsg('');
   $('confirm-sync').hidden = s.state === 'off';
+
+  const nav = $('nav-acct');
+  nav.classList.toggle('is-on', isAccount && s.state !== 'off');
+  $('nav-acct-text').textContent = isAccount && s.state !== 'off' ? 'Akun' : accountsEnabled ? 'Masuk' : 'Akun';
+}
+
+let signingIn = false;
+async function accountSignIn(method, btn) {
+  if (signingIn) return;
+  signingIn = true;
+  const email = $('acct-email').value.trim();
+  const pass = $('acct-pass').value;
+  btn?.setAttribute('aria-busy', 'true');
+  syncMsg(method === 'google' ? 'Membuka jendela login Google…' : 'Masuk…');
+  try {
+    const user = await signIn(method, email, pass);
+    $('acct-pass').value = '';
+    syncMsg(method === 'up'
+      ? `Akun dibuat untuk ${user.email}. Progres di perangkat ini sudah tersimpan di akunmu. Masuk dengan akun yang sama di perangkat lain.`
+      : `Halo${user.email ? `, ${user.email}` : ''}. Progres di perangkat ini dan di akunmu sudah digabung.`);
+    toast('✦ Masuk — progres tersimpan di akun');
+    refresh();
+  } catch (err) {
+    syncMsg(err.message, true);
+    if (method !== 'google') (err.message.includes('sandi') ? $('acct-pass') : $('acct-email')).focus();
+  } finally {
+    signingIn = false;
+    btn?.removeAttribute('aria-busy');
+  }
 }
 
 function setupSync() {
   onSync(renderSync);
+  if (accountsEnabled) {
+    $('acct-login').hidden = false;
+    // Fetch the login code before the click, so the Google popup isn't blocked.
+    const card = $('akun');
+    new IntersectionObserver(([e], io) => { if (e.isIntersecting) { preloadAccount(); io.disconnect(); } }, { rootMargin: '400px' }).observe(card);
+    $('acct-form').addEventListener('submit', (e) => {
+      e.preventDefault();
+      accountSignIn(e.submitter?.value === 'up' ? 'up' : 'in', e.submitter);
+    });
+  } else {
+    $('acct-unset').hidden = false;
+    $('gist-alt').open = true;
+  }
   $('sync-form').addEventListener('submit', async (e) => {
     e.preventDefault();
     const input = $('sync-token');
-    const status = $('sync-status');
     try {
       const { created } = await connect(input.value);
       input.value = '';
-      status.classList.remove('is-error');
-      status.textContent = created
+      syncMsg(created
         ? 'Terhubung. Gist baru dibuat dari progres di perangkat ini. Sekarang tempel token yang sama di perangkat lain.'
-        : 'Terhubung ke gist yang sudah ada. Progres dari perangkat lain sudah digabung ke sini.';
+        : 'Terhubung ke gist yang sudah ada. Progres dari perangkat lain sudah digabung ke sini.');
       toast('✦ Sinkron aktif');
       refresh();
     } catch (err) {
-      status.classList.add('is-error');
-      status.textContent = err.message === 'offline' ? 'Tidak ada internet. Coba lagi saat online.' : err.message;
+      syncMsg(err.message === 'offline' ? 'Tidak ada internet. Coba lagi saat online.' : err.message, true);
       input.focus();
     }
   });
@@ -471,6 +551,7 @@ async function init() {
   if (!loadLocal()) await loadRepoFile();
   renderAll({ reset: true });
   setupEvents();
+  initFocus({ onLog: logSession, onTaskDone: (id) => { if (!store.data.done[id]) toggle(id); }, toast });
   watchOtherTabs();
   startSync();
 

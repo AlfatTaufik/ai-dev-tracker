@@ -153,7 +153,7 @@ function scrollMotion() {
   });
 
   // Blocks fade up
-  gsap.utils.toArray('.nn-card, .cl-card, .coach, .hb-top, .hb-card, .hb-map, .pf-item, .log-top, .log-lower, .data-card, .now-actions, .footer-cols').forEach((el) => {
+  gsap.utils.toArray('.nn-card, .cl-card, .coach, .hb-top, .hb-card, .hb-map, .pf-item, .fo-grid, .log-top, .log-lower, .data-card, .now-actions, .footer-cols').forEach((el) => {
     gsap.from(el, {
       y: 56, opacity: 0, duration: 1.1, ease: 'expo.out',
       scrollTrigger: { trigger: el, start: 'top 90%', once: true },

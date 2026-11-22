@@ -1,17 +1,20 @@
 // Service worker: makes the tracker installable and usable offline.
 // Own files: network first (so a new deploy shows up right away), cache as fallback.
 // If the network is slow, the cached copy is served after a short wait and refreshed in the background.
-// CDN files (fonts, GSAP, Lenis) have versioned URLs, so they are cache first.
-const SHELL = 'aidev-shell-v2';
+// CDN files (fonts, GSAP, Lenis, Firebase SDK) have versioned URLs, so they are cache first.
+const SHELL = 'aidev-shell-v3';
 const CDN = 'aidev-cdn-v2'; // v2: scripts now load with crossorigin (SRI)
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'progress.json',
   'css/tokens.css', 'css/base.css', 'css/components.css', 'css/sections.css',
   'js/main.js', 'js/data.js', 'js/store.js', 'js/util.js', 'js/render.js', 'js/network.js',
   'js/hero.js', 'js/motion.js', 'js/prompts.js', 'js/merge.js', 'js/sync.js',
+  'js/account.js', 'js/firebase-config.js', 'js/focus.js',
   'assets/favicon.svg', 'assets/mascot.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/apple-touch-icon.png',
 ];
-const CDN_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net'];
+// www.gstatic.com serves the pinned Firebase SDK (only when accounts are on). Firebase's own
+// API calls go to other hosts and are never cached.
+const CDN_HOSTS = ['fonts.googleapis.com', 'fonts.gstatic.com', 'cdnjs.cloudflare.com', 'cdn.jsdelivr.net', 'www.gstatic.com'];
 const SLOW_MS = 2500;
 
 self.addEventListener('install', (e) => {
