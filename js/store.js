@@ -1,5 +1,5 @@
 // State, localStorage, norm(), export/import, progress.json view mode.
-import { KEY, M, P, ST } from './data.js';
+import { KEY, M, P, ST, HABIT_DEFAULTS, HABIT_MAX } from './data.js';
 
 const TASK_IDS = new Set(M.flatMap((m) => m.tasks.map((t) => t.id)));
 const MONTH_IDS = new Set(M.map((m) => m.id));
@@ -14,9 +14,16 @@ export function empty() {
     custom: [],
     projects: Object.fromEntries(P.map((p) => [p.id, emptyProject()])),
     log: [],
+    habits: defaultHabits(),
     updated: '',
   };
 }
+
+export function defaultHabits() {
+  return HABIT_DEFAULTS.map((h) => ({ ...h, days: [] }));
+}
+
+const YMD = /^\d{4}-\d{2}-\d{2}$/;
 
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
 
@@ -29,7 +36,7 @@ export function norm(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error('Isi file bukan data AI Dev Tracker.');
   }
-  const known = ['done', 'custom', 'projects', 'log', 'updated'];
+  const known = ['done', 'custom', 'projects', 'log', 'habits', 'updated'];
   if (!known.some((k) => k in raw)) throw new Error('Isi file bukan data AI Dev Tracker.');
 
   const out = empty();
@@ -75,6 +82,29 @@ export function norm(raw) {
     }
   }
 
+  // Habits: missing key (older files) keeps the defaults; an array replaces them.
+  if (Array.isArray(raw.habits)) {
+    out.habits = [];
+    const seen = new Set();
+    for (const h of raw.habits.slice(0, HABIT_MAX)) {
+      if (!h || typeof h !== 'object') continue;
+      const id = str(h.id, 64);
+      const name = str(h.name, 60).trim();
+      if (!/^h[\w-]+$/.test(id) || seen.has(id) || !name) continue;
+      seen.add(id);
+      const goal = Number(h.goal);
+      const days = Array.isArray(h.days)
+        ? [...new Set(h.days.filter((d) => typeof d === 'string' && YMD.test(d)))].sort().slice(-2000)
+        : [];
+      out.habits.push({
+        id, name,
+        goal: Number.isInteger(goal) && goal >= 1 && goal <= 7 ? goal : 7,
+        end: typeof h.end === 'string' && YMD.test(h.end) ? h.end : '',
+        days,
+      });
+    }
+  }
+
   if (typeof raw.updated === 'string' && !Number.isNaN(Date.parse(raw.updated))) out.updated = raw.updated;
   return out;
 }
@@ -108,6 +138,7 @@ export function loadLocal() {
 /** True when data holds any progress at all. */
 export function hasProgress(d) {
   return Object.keys(d.done).length > 0 || d.custom.length > 0 || d.log.length > 0
+    || d.habits.some((h) => h.days.length)
     || Object.values(d.projects).some((p) => p.status || p.github || p.demo || p.notes || p.desc);
 }
 

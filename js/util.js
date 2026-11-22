@@ -1,5 +1,5 @@
 // Small helpers: escaping, dates, derived stats.
-import { M, P, WEEK_TARGET, MONTHS_ID, MONTHS_LONG } from './data.js';
+import { M, P, WEEK_TARGET, MONTHS_ID, MONTHS_LONG, DAYS_ID } from './data.js';
 
 /** Escape any user text before it goes into HTML (text or attribute). */
 export function esc(value) {
@@ -29,6 +29,7 @@ export function weekStart(dt) {
 
 export const fmtShort = (s) => { const d = parseYmd(s); return `${d.getDate()} ${MONTHS_ID[d.getMonth()]}`; };
 export const fmtLong = (s) => { const d = parseYmd(s); return `${d.getDate()} ${MONTHS_LONG[d.getMonth()]} ${d.getFullYear()}`; };
+export const fmtDay = (s) => { const d = parseYmd(s); return `${DAYS_ID[d.getDay()]} ${d.getDate()} ${MONTHS_ID[d.getMonth()]}`; };
 export const fmtHours = (min) => { const h = Math.round((min / 60) * 10) / 10; return Number.isInteger(h) ? String(h) : h.toFixed(1); };
 
 // ---------- Derived data ----------
@@ -109,4 +110,87 @@ export function nextDeadline(data, today = todayStr()) {
 
 export function daysUntil(dateStr, today = todayStr()) {
   return Math.round((parseYmd(dateStr) - parseYmd(today)) / 86400000);
+}
+
+// ---------- Habits ----------
+/** A habit counts on a day when it has no end date or the day is on/before it. */
+export const habitActive = (h, day) => !h.end || day <= h.end;
+
+/** Last n days ending today, oldest first, as YYYY-MM-DD. */
+export function lastDays(n = 7, now = new Date()) {
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) out.push(ymd(addDays(now, -i)));
+  return out;
+}
+
+/** Days this habit was done in the current Monday-Sunday week. */
+export function habitWeekCount(h, now = new Date()) {
+  const from = ymd(weekStart(now));
+  const to = ymd(addDays(weekStart(now), 6));
+  return h.days.filter((d) => d >= from && d <= to).length;
+}
+
+/** Consecutive done days ending today (or yesterday, so today is not a broken streak yet). */
+export function habitStreak(h, now = new Date()) {
+  const days = new Set(h.days);
+  let d = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  if (!days.has(ymd(d))) d = addDays(d, -1);
+  let n = 0;
+  while (days.has(ymd(d))) { n++; d = addDays(d, -1); }
+  return n;
+}
+
+/** Longest run of consecutive done days, ever. */
+export function habitBest(h) {
+  let best = 0, run = 0, prev = null;
+  for (const s of h.days) {
+    const d = parseYmd(s);
+    run = prev && Math.round((d - prev) / 86400000) === 1 ? run + 1 : 1;
+    best = Math.max(best, run);
+    prev = d;
+  }
+  return best;
+}
+
+/** {done, total} for habits that run today. */
+export function habitsToday(data, today = todayStr()) {
+  const act = data.habits.filter((h) => habitActive(h, today));
+  return { done: act.filter((h) => h.days.includes(today)).length, total: act.length };
+}
+
+/** Share of each day's running habits that were done: Map day -> {done, total}. */
+export function habitDayMap(data, days) {
+  const sets = data.habits.map((h) => ({ h, set: new Set(h.days) }));
+  const out = new Map();
+  for (const day of days) {
+    let done = 0, total = 0;
+    for (const { h, set } of sets) if (habitActive(h, day)) { total++; if (set.has(day)) done++; }
+    out.set(day, { done, total });
+  }
+  return out;
+}
+
+/** Weekly goals met over the last 4 weeks, as a percent (each habit capped at 100%). */
+export function habitConsistency(data, now = new Date()) {
+  // Count from the first day anything was ticked, so a new tracker doesn't start at 0%.
+  const first = data.habits.map((h) => h.days[0]).filter(Boolean).sort()[0];
+  if (!first) return 0;
+  const days = lastDays(28, now).filter((d) => d >= first);
+  const parts = [];
+  for (const h of data.habits) {
+    const live = days.filter((d) => habitActive(h, d));
+    if (!live.length) continue;
+    const set = new Set(h.days);
+    const want = (h.goal * live.length) / 7;
+    parts.push(Math.min(1, live.filter((d) => set.has(d)).length / want));
+  }
+  return parts.length ? Math.round((parts.reduce((a, b) => a + b, 0) / parts.length) * 100) : 0;
+}
+
+/** Days (up to today) on which every running habit was done. */
+export function perfectDays(data, today = todayStr()) {
+  const all = new Set(data.habits.flatMap((h) => h.days));
+  let n = 0;
+  for (const [, v] of habitDayMap(data, [...all].filter((d) => d <= today))) if (v.total && v.done === v.total) n++;
+  return n;
 }

@@ -14,21 +14,21 @@ export const WEEK_TARGET = 8; // hours per week
 export const M = [
   {
     id: 'm0', short: 'NOV', name: 'November 2026', phase: 'FASE 0', stage: 'Ujian dulu',
-    start: '2026-11-01', end: '2026-11-30',
+    start: '2026-11-01', end: '2026-12-05', // ujian sampai 5 Desember
     tasks: [
-      { id: 'm0-1', t: 'Selesaikan UAS dan tugas akhir semester', d: '2026-11-30' },
-      { id: 'm0-2', t: 'Setup: Python 3.12, VS Code, Git, akun GitHub dan Kaggle', d: '2026-11-30' },
+      { id: 'm0-1', t: 'Selesaikan UAS dan tugas akhir semester', d: '2026-12-05' },
+      { id: 'm0-2', t: 'Setup: Python 3.12, VS Code, Git, akun GitHub dan Kaggle', d: '2026-12-05' },
     ],
   },
   {
     id: 'm1', short: 'DES', name: 'Desember 2026', phase: 'FASE 1', stage: 'Python dasar',
-    start: '2026-12-01', end: '2026-12-31',
+    start: '2026-12-06', end: '2026-12-31',
     tasks: [
-      { id: 'm1-1', t: 'Python dasar: tipe data, kondisi, perulangan, fungsi', d: '2026-12-07' },
-      { id: 'm1-2', t: 'List, dict, set, dan comprehension', d: '2026-12-10' },
-      { id: 'm1-3', t: 'OOP, modul, dan virtual environment', d: '2026-12-14' },
-      { id: 'm1-4', t: 'NumPy: array, indexing, broadcasting', d: '2026-12-18' },
-      { id: 'm1-5', t: 'Pandas: baca CSV, filter, groupby, merge', d: '2026-12-24' },
+      { id: 'm1-1', t: 'Python dasar: tipe data, kondisi, perulangan, fungsi', d: '2026-12-10' },
+      { id: 'm1-2', t: 'List, dict, set, dan comprehension', d: '2026-12-13' },
+      { id: 'm1-3', t: 'OOP, modul, dan virtual environment', d: '2026-12-17' },
+      { id: 'm1-4', t: 'NumPy: array, indexing, broadcasting', d: '2026-12-21' },
+      { id: 'm1-5', t: 'Pandas: baca CSV, filter, groupby, merge', d: '2026-12-26' },
       { id: 'm1-6', t: 'Mini proyek: analisis dataset CSV + grafik Matplotlib', d: '2026-12-31' },
     ],
   },
@@ -117,6 +117,22 @@ export const ST = {
 };
 
 export const TICKER = ['Python', 'NumPy', 'Pandas', 'Machine learning', 'scikit-learn', 'PyTorch', 'Kaggle', 'Transformer', 'LLM', 'RAG', 'Portofolio'];
+
+// Habit tracker. Default habits for a fresh tracker; ids are stable, so don't change them.
+// end = last day the habit runs (optional). goal = target days per week (1-7).
+export const EXAM_END = '2026-12-05';
+export const HABIT_DEFAULTS = [
+  { id: 'h-exam', name: 'Belajar materi ujian', goal: 6, end: EXAM_END },
+  { id: 'h-ai', name: 'Belajar AI 30 menit', goal: 5, end: '' },
+  { id: 'h-move', name: 'Olahraga atau jalan 20 menit', goal: 3, end: '' },
+  { id: 'h-sleep', name: 'Tidur sebelum jam 12', goal: 7, end: '' },
+];
+export const HABIT_MAX = 12;
+// A learning-log session of at least this many minutes also ticks the 'h-ai' habit for that day.
+export const HABIT_AI_MIN = 30;
+
+export const DAYS_ID = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
+export const DAYS_LONG = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];
 
 export const MONTHS_ID = ['JAN', 'FEB', 'MAR', 'APR', 'MEI', 'JUN', 'JUL', 'AGU', 'SEP', 'OKT', 'NOV', 'DES'];
 export const MONTHS_LONG = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'];

@@ -1,5 +1,5 @@
 // Init + event listeners.
-import { M, MASCOT_SRC, TICKER } from './data.js';
+import { M, MASCOT_SRC, TICKER, HABIT_MAX, HABIT_AI_MIN } from './data.js';
 import {
   store, subscribe, loadLocal, loadRepoFile, update, editHere,
   exportJSON, importFile, clearAll, watchOtherTabs,
@@ -9,7 +9,7 @@ import { initNetwork } from './network.js';
 import { initHero } from './hero.js';
 import { initMotion, scrollToEl, refresh, stopScroll, startScroll } from './motion.js';
 import { coachPrompt, descPrompt, copyText } from './prompts.js';
-import { activeMonth, monthProgress, todayStr } from './util.js';
+import { activeMonth, monthProgress, todayStr, habitActive, habitsToday } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -57,6 +57,74 @@ function deleteTask(id) {
     delete d.done[id];
   });
   $('new-task').focus();
+}
+
+// ---------- Habits ----------
+function setHabitDay(d, id, day, on) {
+  const h = d.habits.find((x) => x.id === id);
+  if (!h || !habitActive(h, day)) return;
+  const has = h.days.includes(day);
+  if (on && !has) { h.days.push(day); h.days.sort(); }
+  if (!on && has) h.days = h.days.filter((x) => x !== day);
+}
+
+function toggleHabit(id, day) {
+  if (store.readOnly || day > todayStr()) return;
+  const h = store.data.habits.find((x) => x.id === id);
+  if (!h) return;
+  const before = habitsToday(store.data);
+  update((d) => setHabitDay(d, id, day, !h.days.includes(day)));
+  const after = habitsToday(store.data);
+  if (day === todayStr() && after.total && after.done === after.total && before.done < before.total) {
+    toast('✦ Semua kebiasaan hari ini beres');
+  }
+}
+
+let armTimer = 0;
+function deleteHabit(btn) {
+  const id = btn.dataset.h;
+  const h = store.data.habits.find((x) => x.id === id);
+  if (!h) return;
+  clearTimeout(armTimer);
+  if (ui.hbArmed !== id) {
+    // First click arms the button (render shows "Hapus?"); a second click within 4s deletes.
+    ui.hbArmed = id;
+    renderAll();
+    armTimer = setTimeout(() => { ui.hbArmed = ''; renderAll(); }, 4000);
+    return;
+  }
+  ui.hbArmed = '';
+  update((d) => { d.habits = d.habits.filter((x) => x.id !== id); });
+  toast(`Kebiasaan dihapus: ${h.name}`);
+  $('hb-new').focus({ preventScroll: true });
+  refresh();
+}
+
+/** Arrow keys move the roving focus around the 7-day habit grid. */
+function habitKeys(e) {
+  const cell = e.target.closest('.hb-cell');
+  if (!cell) return;
+  const step = { ArrowLeft: [0, -1], ArrowRight: [0, 1], ArrowUp: [-1, 0], ArrowDown: [1, 0] }[e.key];
+  const all = [...$('hb-rows').querySelectorAll('.hb-cell:not(:disabled)')];
+  let next = null;
+  if (step) {
+    let r = Number(cell.dataset.r), c = Number(cell.dataset.c);
+    for (let i = 0; i < 8 && !next; i++) {
+      r += step[0]; c += step[1];
+      if (c < 0 || c > 6 || r < 0) break;
+      next = all.find((b) => Number(b.dataset.r) === r && Number(b.dataset.c) === c);
+      if (!next && !all.some((b) => Number(b.dataset.r) === r)) break;
+    }
+  } else if (e.key === 'Home' || e.key === 'End') {
+    const row = all.filter((b) => b.dataset.r === cell.dataset.r);
+    next = e.key === 'Home' ? row[0] : row[row.length - 1];
+  } else return;
+  e.preventDefault();
+  if (!next) return;
+  cell.tabIndex = -1;
+  next.tabIndex = 0;
+  ui.hbFocus = next.dataset.fkey;
+  next.focus();
 }
 
 function openMonth(id) {
@@ -142,6 +210,8 @@ function setupEvents() {
       case 'month': selectMonth(el.dataset.month); break;
       case 'open-month': openMonth(el.dataset.month); break;
       case 'del-task': deleteTask(el.dataset.id); break;
+      case 'habit': ui.hbFocus = el.dataset.fkey; ui.hbPop = el.dataset.fkey; toggleHabit(el.dataset.h, el.dataset.d); break;
+      case 'del-habit': deleteHabit(el); break;
       case 'del-log': {
         const idx = Number(el.dataset.idx);
         update((d) => { d.log.splice(idx, 1); });
@@ -231,11 +301,38 @@ function setupEvents() {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d)) { status.textContent = 'Isi tanggal dulu.'; $('log-date').focus(); return; }
     if (d > todayStr()) { status.textContent = 'Tanggal tidak boleh di masa depan.'; $('log-date').focus(); return; }
     if (!Number.isFinite(m) || m < 1 || m > 1440) { status.textContent = 'Menit harus antara 1 dan 1440.'; $('log-min').focus(); return; }
-    update((data) => { data.log.push({ d, m: Math.round(m), n }); });
+    // A long enough session also ticks the "Belajar AI" habit for that day.
+    const ai = store.data.habits.find((h) => h.id === 'h-ai');
+    const tick = ai && m >= HABIT_AI_MIN && habitActive(ai, d) && !ai.days.includes(d);
+    update((data) => {
+      data.log.push({ d, m: Math.round(m), n });
+      if (tick) setHabitDay(data, 'h-ai', d, true);
+    });
     status.classList.remove('is-error');
-    status.textContent = `Tercatat: ${Math.round(m)} menit.`;
+    status.textContent = `Tercatat: ${Math.round(m)} menit.${tick ? ` Kebiasaan “${ai.name}” ikut dicentang.` : ''}`;
     $('log-note').value = '';
-    toast(`+${Math.round(m)} menit tercatat`);
+    toast(`+${Math.round(m)} menit tercatat${tick ? ' · kebiasaan ✓' : ''}`);
+    refresh();
+  });
+
+  $('hb-rows').addEventListener('keydown', habitKeys);
+
+  $('hb-form').addEventListener('submit', (e) => {
+    e.preventDefault();
+    const input = $('hb-new');
+    const name = input.value.trim().slice(0, 60);
+    const status = $('hb-status');
+    status.classList.add('is-error');
+    if (!name) { status.textContent = 'Tulis nama kebiasaannya dulu.'; input.focus(); return; }
+    if (store.data.habits.length >= HABIT_MAX) { status.textContent = `Maksimal ${HABIT_MAX} kebiasaan. Hapus satu dulu.`; return; }
+    if (store.data.habits.some((h) => h.name.toLowerCase() === name.toLowerCase())) { status.textContent = 'Kebiasaan itu sudah ada.'; input.focus(); return; }
+    const goal = Math.min(7, Math.max(1, Number($('hb-goal').value) || 7));
+    const id = `h${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    update((d) => { d.habits.push({ id, name, goal, end: '', days: [] }); });
+    status.classList.remove('is-error');
+    status.textContent = `Ditambahkan: ${name}.`;
+    input.value = '';
+    toast('Kebiasaan ditambahkan');
     refresh();
   });
 
@@ -256,7 +353,7 @@ function setupEvents() {
       const data = await importFile(file);
       ui.month = activeMonth().id;
       setupLogForm();
-      setDataStatus(`Impor berhasil: ${Object.keys(data.done).length} tugas selesai, ${data.log.length} log, ${data.custom.length} tugas sendiri.`);
+      setDataStatus(`Impor berhasil: ${Object.keys(data.done).length} tugas selesai, ${data.log.length} log, ${data.custom.length} tugas sendiri, ${data.habits.length} kebiasaan.`);
       refresh();
     } catch (err) {
       setDataStatus(`Impor gagal: ${err.message}`, true);

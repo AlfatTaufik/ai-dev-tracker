@@ -1,8 +1,8 @@
 // Prompt builders (no AI API calls from the site) + copy with textarea fallback.
-import { M, P, ST, WEEK_TARGET } from './data.js';
+import { M, P, ST, WEEK_TARGET, EXAM_END } from './data.js';
 import {
   activeMonth, monthProgress, totals, thisWeekMinutes, weeks, overdue,
-  fmtHours, fmtLong, todayStr,
+  fmtHours, fmtLong, todayStr, habitActive, habitWeekCount, habitStreak, habitConsistency, lastDays,
 } from './util.js';
 
 export function coachPrompt(data) {
@@ -27,10 +27,21 @@ export function coachPrompt(data) {
     `- Jam belajar minggu ini: ${fmtHours(thisWeekMinutes(data))} dari target ${WEEK_TARGET} jam`,
     `- Rata-rata 4 minggu terakhir: ${fmtHours(last4)} jam per minggu`,
     `- Proyek: ${P.map((p) => `${p.title} (${ST[data.projects[p.id]?.status ?? '']})`).join(', ')}`,
+    ...(today <= EXAM_END ? [`- Saya masih ujian sampai ${fmtLong(EXAM_END)}. Jangan bebani berlebihan sebelum tanggal itu.`] : []),
     '',
     'TUGAS BULAN INI',
     ...mp.tasks.map((x) => `[${data.done[x.id] ? 'x' : ' '}] ${x.t}${x.d ? ` (target ${fmtLong(x.d)})` : ''}`),
   ];
+  const habits = data.habits.filter((h) => habitActive(h, today));
+  if (habits.length) {
+    const days = lastDays(7);
+    lines.push('', `KEBIASAAN (7 hari terakhir, x = dikerjakan; target 4 minggu tercapai ${habitConsistency(data)}%)`);
+    for (const h of habits) {
+      const marks = days.map((d) => (h.days.includes(d) ? 'x' : '.')).join('');
+      const st = habitStreak(h);
+      lines.push(`- ${h.name}: ${marks} | ${habitWeekCount(h)}/${h.goal} minggu ini${st > 1 ? `, beruntun ${st} hari` : ''}${h.end ? `, sampai ${fmtLong(h.end)}` : ''}`);
+    }
+  }
   if (late.length) {
     lines.push('', 'TERTINGGAL DARI BULAN SEBELUMNYA', ...late.map((x) => `[ ] ${x.t} (${x.month.short})`));
   }
@@ -47,6 +58,7 @@ export function coachPrompt(data) {
     `2. Rencana 7 hari ke depan, total maksimal ${WEEK_TARGET} jam, sesi 30 sampai 90 menit, sebut tugas mana dari daftar di atas.`,
     '3. Satu sumber belajar gratis terbaik untuk tugas berikutnya (dokumentasi resmi atau kursus gratis).',
     '4. Satu pertanyaan untuk mengecek pemahaman saya tentang materi terakhir di log.',
+    '5. Kebiasaan mana yang paling sering bolong, dan satu trik kecil supaya lebih konsisten.',
   );
   return lines.join('\n');
 }

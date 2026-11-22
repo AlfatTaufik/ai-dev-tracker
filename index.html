@@ -56,6 +56,7 @@
       <nav class="nav-links" aria-label="Navigasi utama">
         <a href="#fase" data-cursor>Roadmap</a>
         <a href="#roadmap" data-cursor>Checklist</a>
+        <a href="#kebiasaan" data-cursor>Kebiasaan</a>
         <a href="#portofolio" data-cursor>Portofolio</a>
         <a href="#log" data-cursor>Log</a>
         <a href="#data" data-cursor>Data</a>
@@ -76,9 +77,10 @@
         <a href="#top"><span class="mono">01</span>Beranda</a>
         <a href="#fase"><span class="mono">02</span>Roadmap</a>
         <a href="#roadmap"><span class="mono">03</span>Checklist</a>
-        <a href="#portofolio"><span class="mono">04</span>Portofolio</a>
-        <a href="#log"><span class="mono">05</span>Log <em>belajar</em></a>
-        <a href="#data"><span class="mono">06</span>Data</a>
+        <a href="#kebiasaan"><span class="mono">04</span>Kebiasaan</a>
+        <a href="#portofolio"><span class="mono">05</span>Portofolio</a>
+        <a href="#log"><span class="mono">06</span>Log <em>belajar</em></a>
+        <a href="#data"><span class="mono">07</span>Data</a>
       </nav>
       <p class="mono menu-foot">Enam bulan menuju AI developer — satu tugas setiap kali.</p>
     </div>
@@ -221,11 +223,57 @@
       </div>
     </section>
 
+    <!-- ===== Habits ===== -->
+    <section class="section habits" id="kebiasaan" aria-labelledby="hb-title">
+      <div class="wrap">
+        <div class="sec-head">
+          <div class="sec-label mono"><span>(04)</span><span>Kebiasaan</span></div>
+          <h2 class="h2" id="hb-title"><span class="mask"><span>Hari demi</span></span><span class="mask"><span><em>hari</em>.</span></span></h2>
+        </div>
+
+        <div class="hb-top">
+          <p class="hb-lead" id="hb-lead"></p>
+          <dl class="log-stats hb-stats" id="hb-stats"></dl>
+        </div>
+
+        <div class="hb-card">
+          <div class="hb-grid" id="hb-grid" role="group" aria-labelledby="hb-grid-title">
+            <h3 class="sr-only" id="hb-grid-title">Kebiasaan, tujuh hari terakhir</h3>
+            <div class="hb-rows" id="hb-rows"></div>
+          </div>
+          <p class="nn-hint mono edit-only hb-hint">Klik kotak untuk mencentang · panah untuk pindah · log belajar ≥ 30 menit ikut mencentang “Belajar AI”</p>
+          <form class="hb-form edit-only" id="hb-form" autocomplete="off" novalidate>
+            <label class="field hb-name-field"><span>Kebiasaan baru</span><input class="input" id="hb-new" type="text" maxlength="60" placeholder="Misal: Baca 10 halaman"></label>
+            <label class="field"><span>Target</span>
+              <select class="select" id="hb-goal">
+                <option value="7">Setiap hari</option>
+                <option value="6">6× seminggu</option>
+                <option value="5" selected>5× seminggu</option>
+                <option value="4">4× seminggu</option>
+                <option value="3">3× seminggu</option>
+                <option value="2">2× seminggu</option>
+                <option value="1">1× seminggu</option>
+              </select></label>
+            <button class="btn btn-sm" type="submit">Tambah kebiasaan</button>
+            <p class="status hb-status" id="hb-status" aria-live="polite"></p>
+          </form>
+        </div>
+
+        <figure class="hb-map">
+          <figcaption class="hb-map-head">
+            <h3 class="mono chart-title">Enam bulan dalam kotak <span class="muted">— tiap kotak satu hari</span></h3>
+            <span class="hb-legend mono" aria-hidden="true">Sedikit <i class="l0"></i><i class="l1"></i><i class="l2"></i><i class="l3"></i><i class="l4"></i> Semua <i class="lx"></i> Ujian selesai</span>
+          </figcaption>
+          <div class="hb-heat-scroll"><div class="hb-heat" id="hb-heat" role="img"></div></div>
+        </figure>
+      </div>
+    </section>
+
     <!-- ===== Portfolio ===== -->
     <section class="section projects theme-light" id="portofolio" aria-labelledby="pf-title">
       <div class="wrap">
         <div class="sec-head">
-          <div class="sec-label mono"><span>(04)</span><span>Portofolio</span></div>
+          <div class="sec-label mono"><span>(05)</span><span>Portofolio</span></div>
           <h2 class="h2" id="pf-title"><span class="mask"><span>Tiga proyek</span></span><span class="mask"><span>yang <em>bicara</em>.</span></span></h2>
         </div>
         <ol class="pf-list" id="projects"></ol>
@@ -240,7 +288,7 @@
     <section class="section log" id="log" aria-labelledby="log-title">
       <div class="wrap">
         <div class="sec-head">
-          <div class="sec-label mono"><span>(05)</span><span>Log belajar</span></div>
+          <div class="sec-label mono"><span>(06)</span><span>Log belajar</span></div>
           <h2 class="h2" id="log-title"><span class="mask"><span>Jam terbang</span></span><span class="mask"><span><em>minggu ini</em>.</span></span></h2>
         </div>
 
@@ -276,7 +324,7 @@
       <div class="wrap">
         <div class="data-card">
           <div class="data-text">
-            <div class="sec-label mono"><span>(06)</span><h2 class="data-h" id="data-title">Data</h2></div>
+            <div class="sec-label mono"><span>(07)</span><h2 class="data-h" id="data-title">Data</h2></div>
             <p class="data-lead">Semua progres tinggal di <em>browser ini</em>. Tanpa server, tanpa akun.</p>
             <p class="muted">Kunci localStorage <code>aidev-tracker-v1</code>. Ekspor ke <code>progress.json</code> untuk cadangan, atau taruh file itu di repo GitHub Pages supaya orang lain bisa melihat progresmu dalam mode lihat.</p>
             <p class="mono muted" id="data-updated"></p>
@@ -289,7 +337,7 @@
               <button class="btn btn-danger edit-only" id="ask-clear" type="button" data-action="ask-clear">Hapus semua data</button>
             </div>
             <div class="confirm" id="confirm" role="group" aria-labelledby="confirm-text" hidden>
-              <p id="confirm-text"><strong>Hapus semua progres di browser ini?</strong> Tugas, proyek, dan log akan hilang dan tidak bisa dikembalikan. Ekspor dulu kalau ragu.</p>
+              <p id="confirm-text"><strong>Hapus semua progres di browser ini?</strong> Tugas, proyek, kebiasaan, dan log akan hilang dan tidak bisa dikembalikan. Ekspor dulu kalau ragu.</p>
               <div class="confirm-actions">
                 <button class="btn btn-danger-solid btn-sm" type="button" data-action="do-clear">Ya, hapus semua</button>
                 <button class="btn btn-ghost btn-sm" id="confirm-cancel" type="button" data-action="cancel-clear">Batal</button>
@@ -311,6 +359,7 @@
           <li><a href="#top">Beranda</a></li>
           <li><a href="#fase">Roadmap</a></li>
           <li><a href="#roadmap">Checklist</a></li>
+          <li><a href="#kebiasaan">Kebiasaan</a></li>
           <li><a href="#portofolio">Portofolio</a></li>
           <li><a href="#log">Log</a></li>
         </ul>

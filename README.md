@@ -1,8 +1,8 @@
 # AI Dev Tracker
 
 Tracker roadmap 6 bulan menuju AI developer, dari Python sampai LLM, sambil kuliah.
-Checklist per bulan, grafik jaringan progres, tiga proyek portofolio, log jam belajar,
-dan prompt AI coach yang tinggal disalin.
+Checklist per bulan, grafik jaringan progres, habit tracker harian, tiga proyek portofolio,
+log jam belajar, dan prompt AI coach yang tinggal disalin.
 
 HTML, CSS, dan JavaScript biasa (ES modules), tanpa build step. Data disimpan di browser
 (localStorage), jadi tidak ada server atau akun.
@@ -33,8 +33,8 @@ progress.json         data untuk mode lihat (default kosong, lihat di bawah)
 css/tokens.css        warna (tema gelap, terang, lime), font, spacing, radius
 css/base.css          reset, tipografi, grain, focus ring, reduced motion
 css/components.css    tombol, CTA lingkaran, tab, checkbox, input, pill status, ticker, cursor, toast
-css/sections.css      nav, intro, hero, bulan ini, fase, checklist, portofolio, log, data, footer
-js/data.js            roadmap M, proyek P, status ST, target jam, MASCOT_SRC
+css/sections.css      nav, intro, hero, bulan ini, fase, checklist, kebiasaan, portofolio, log, data, footer
+js/data.js            roadmap M, proyek P, status ST, target jam, kebiasaan bawaan, tanggal ujian, MASCOT_SRC
 js/store.js           state, localStorage, norm(), ekspor/impor, mode lihat
 js/util.js            escape, tanggal, statistik turunan
 js/render.js          render semua section
@@ -58,14 +58,33 @@ assets/favicon.svg
     "custom":   [{ "id": "c...", "m": "<monthId>", "text": "..." }],
     "projects": { "p1": { "status": "", "github": "", "demo": "", "notes": "", "desc": "" } },
     "log":      [{ "d": "YYYY-MM-DD", "m": 90, "n": "catatan" }],
+    "habits":   [{ "id": "h-ai", "name": "Belajar AI 30 menit", "goal": 5, "end": "", "days": ["YYYY-MM-DD"] }],
     "updated":  "ISO date"
   }
   ```
 
 - Semua data yang dibaca (localStorage, file impor, `progress.json`) lewat `norm()` di
   `js/store.js`. Id yang tidak dikenal dibuang, tipe dicek, dan panjang teks dibatasi.
+- `habits` ditambahkan belakangan. File lama tanpa `habits` tetap bisa diimpor dan mendapat
+  kebiasaan bawaan. `goal` = target hari per minggu (1–7), `end` = hari terakhir (opsional).
 - **Jangan ubah id bulan (`m0`…`m6`) atau id tugas (`m0-1`…) di `js/data.js`.** Progres
   disimpan berdasarkan id itu. Mengubah teks atau tanggal tugas aman.
+
+## Kebiasaan (habit tracker)
+
+Section **Kebiasaan** berisi grid 7 hari terakhir. Klik kotak untuk mencentang (hari yang
+sudah lewat juga bisa diisi), dan panah untuk pindah dengan keyboard. Di bawahnya ada peta
+"Enam bulan dalam kotak": satu kotak per hari dari November sampai Mei, makin terang makin
+banyak kebiasaan yang beres.
+
+- Kebiasaan bawaan: belajar materi ujian (berhenti otomatis setelah 5 Desember 2026),
+  belajar AI 30 menit, olahraga, dan tidur sebelum jam 12. Bisa dihapus (klik × dua kali)
+  atau ditambah sendiri, maksimal 12.
+- Sesi di log belajar yang 30 menit atau lebih otomatis mencentang "Belajar AI 30 menit"
+  untuk tanggal itu.
+- Ringkasan kebiasaan ikut masuk ke prompt AI coach.
+- Tanggal akhir ujian ada di `EXAM_END` dan kebiasaan bawaan di `HABIT_DEFAULTS`
+  (`js/data.js`).
 
 ## Ganti maskot
 
@@ -95,7 +114,7 @@ selama `progress.json` di repo berisi progres:
 1. Di bagian **Data**, klik **Ekspor progress.json**.
 2. Ganti `progress.json` di root repo dengan file itu, lalu commit dan push.
 
-Dalam mode lihat, form edit, checkbox, dan tombol hapus disembunyikan. Tombol
+Dalam mode lihat, form edit, checkbox, kotak kebiasaan, dan tombol hapus dikunci atau disembunyikan. Tombol
 **Edit di browser ini** menyalin data itu ke localStorage supaya bisa dilanjutkan.
 `progress.json` bawaan sengaja kosong, jadi mode lihat baru aktif setelah kamu menggantinya.
 
@@ -105,8 +124,11 @@ Dalam mode lihat, form edit, checkbox, dan tombol hapus disembunyikan. Tombol
 - Grafik jaringan: SVG belakang `role="img"` dengan ringkasan, simpul `role="button"`
   dengan `aria-pressed`. Tab masuk ke satu simpul, panah untuk pindah, Enter/Spasi untuk mencentang.
 - Tab bulan bisa dipindah dengan panah kiri/kanan, Home, dan End.
+- Grid kebiasaan: satu titik Tab, panah untuk pindah, Enter/Spasi untuk mencentang. Tiap
+  kotak adalah tombol dengan `aria-pressed` dan label nama kebiasaan + tanggal.
 - Jaringan 3D di hero hanya dekorasi (`aria-hidden`). Versi yang bisa dipakai ada di checklist.
 - Saat `prefers-reduced-motion: reduce`: tanpa intro, smooth scroll, pin horizontal, cursor,
   atau animasi. Semua konten langsung terlihat.
 - Custom cursor dan tombol magnetik hanya aktif di perangkat dengan mouse.
-- Lighthouse (lokal): Accessibility 100, Best Practices 100, SEO 100, Performance 94–98.
+- Lighthouse (lokal): Accessibility 100, Best Practices 100, SEO 100. Performance desktop 97;
+  mobile 70–94 tergantung beban mesin saat diukur.

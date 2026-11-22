@@ -1,15 +1,20 @@
 // Rendering. Every piece of user text goes through esc().
-import { M, P, ST, WEEK_TARGET, MONTHS_LONG } from './data.js';
+import { M, P, ST, WEEK_TARGET, MONTHS_LONG, MONTHS_ID, DAYS_ID, DAYS_LONG, EXAM_END } from './data.js';
 import { store } from './store.js';
 import { renderNetwork } from './network.js';
 import {
   esc, safeUrl, activeMonth, monthProgress, totals, thisWeekMinutes, weeks, streak,
-  projectsOnline, nextDeadline, overdue, daysUntil, fmtHours, fmtShort, fmtLong, todayStr, ymd, parseYmd,
+  projectsOnline, nextDeadline, overdue, daysUntil, fmtHours, fmtShort, fmtLong, fmtDay, todayStr, ymd, parseYmd,
+  addDays, weekStart, habitActive, lastDays, habitWeekCount, habitStreak, habitsToday, habitDayMap,
+  habitConsistency, perfectDays,
 } from './util.js';
 
 export const ui = {
   month: activeMonth().id, // month shown in the checklist
   pop: null,               // node id that just toggled (animation)
+  hbFocus: '',             // habit grid cell that holds the roving tabindex
+  hbArmed: '',
+  hbPop: '',               // habit cell that just toggled (animation)             // habit whose delete button waits for a second click
 };
 
 const $ = (id) => document.getElementById(id);
@@ -63,6 +68,8 @@ function renderNow(data) {
     seg.push([`Tenggat berikutnya ${when}:`, false], [next.t.charAt(0).toLowerCase() + next.t.slice(1) + '.', false]);
   }
   if (late) seg.push([cap(`${say(late)} tugas terlambat.`), true]);
+  const ht = habitsToday(data);
+  if (ht.total) seg.push([`Kebiasaan hari ini: ${say(ht.done)} dari ${say(ht.total)}.`, false]);
   seg.push(['Pelan boleh,', false], ['berhenti jangan.', true]);
 
   let i = 0;
@@ -154,6 +161,139 @@ function renderChecklist(data) {
       </li>`;
     }).join('') || '<li class="task-empty muted">Belum ada tugas.</li>';
   });
+}
+
+// ---------- Habits ----------
+function habitLevel(v) {
+  if (!v || !v.total || !v.done) return 0;
+  const f = v.done / v.total;
+  return f < 0.34 ? 1 : f < 0.67 ? 2 : f < 1 ? 3 : 4;
+}
+
+function renderHabits(data) {
+  const today = todayStr();
+  const ro = store.readOnly;
+  const days = lastDays(7);
+  const ht = habitsToday(data);
+
+  // Lead + stats
+  let lead = ht.total
+    ? `Hari ini <em>${say(ht.done)} dari ${say(ht.total)}</em> kebiasaan.`
+    : 'Belum ada kebiasaan. Tambahkan satu di bawah.';
+  if (today <= EXAM_END) {
+    const dd = daysUntil(EXAM_END);
+    lead += ` <span class="muted">Ujian selesai ${dd === 0 ? 'hari ini' : dd === 1 ? 'besok' : `${say(dd)} hari lagi`} — cukup jaga ritme.</span>`;
+  } else {
+    const top = data.habits.map((h) => ({ h, n: habitStreak(h) })).sort((a, b) => b.n - a.n)[0];
+    if (top?.n > 1) lead += ` <span class="muted">Beruntun terpanjang: ${esc(top.h.name.toLowerCase())}, ${say(top.n)} hari.</span>`;
+  }
+  $('hb-lead').innerHTML = lead;
+  $('hb-stats').innerHTML = `
+    <div><dt class="mono">Hari ini</dt><dd>${ht.done}<small>/${ht.total}</small></dd></div>
+    <div><dt class="mono">Target 4 minggu</dt><dd>${habitConsistency(data)}<small>%</small></dd></div>
+    <div><dt class="mono">Hari sempurna</dt><dd>${perfectDays(data)}</dd></div>`;
+
+  // 7-day grid: running habits first, ended ones after.
+  const list = [...data.habits].sort((a, b) => Number(!habitActive(a, today)) - Number(!habitActive(b, today)));
+  const head = `<div class="hb-row hb-head" aria-hidden="true"><span class="hb-name mono muted">7 hari terakhir</span>${days.map((d) => {
+    const dt = parseYmd(d);
+    return `<span class="hb-day${d === today ? ' is-today' : ''}"><b>${d === today ? 'Kini' : DAYS_ID[dt.getDay()]}</b><span class="tnum">${dt.getDate()}</span></span>`;
+  }).join('')}<span></span></div>`;
+
+  const rows = list.map((h, r) => {
+    const set = new Set(h.days);
+    const ended = !habitActive(h, today);
+    const wk = habitWeekCount(h);
+    const st = habitStreak(h);
+    const meta = ended
+      ? `Selesai ${fmtShort(h.end)} · ${h.days.length} hari tercentang`
+      : [`<span class="${wk >= h.goal ? 'hit' : ''}">${wk}/${h.goal} minggu ini</span>`,
+        st > 1 ? `${st} hari beruntun` : '',
+        h.end ? `sampai ${fmtShort(h.end)}` : ''].filter(Boolean).join(' · ');
+    const cells = days.map((d, c) => {
+      if (!habitActive(h, d)) return '<span class="hb-cell is-off" aria-hidden="true"></span>';
+      const on = set.has(d);
+      const dt = parseYmd(d);
+      const key = `hb-${h.id}-${d}`;
+      return `<button class="hb-cell${on ? ' is-on' : ''}${d === today ? ' is-today' : ''}${ui.hbPop === key ? ' pop' : ''}" type="button"
+        data-action="habit" data-h="${esc(h.id)}" data-d="${d}" data-r="${r}" data-c="${c}" data-fkey="hb-${esc(h.id)}-${d}"
+        aria-pressed="${on}" aria-label="${esc(h.name)}, ${DAYS_LONG[dt.getDay()]} ${dt.getDate()} ${MONTHS_LONG[dt.getMonth()]}${d === today ? ' (hari ini)' : ''}"
+        aria-describedby="hb-meta-${esc(h.id)}" tabindex="-1"${ro ? ' disabled' : ''}></button>`;
+    }).join('');
+    const armed = ui.hbArmed === h.id;
+    const del = ro ? '<span></span>'
+      : `<button class="icon-btn hb-del${armed ? ' is-armed' : ''}" type="button" data-action="del-habit" data-h="${esc(h.id)}" data-fkey="hbdel-${esc(h.id)}"
+        aria-label="${armed ? `Klik lagi untuk menghapus ${esc(h.name)} beserta riwayatnya` : `Hapus kebiasaan: ${esc(h.name)}`}">${armed ? 'Hapus?' : '×'}</button>`;
+    return `<div class="hb-row${ended ? ' is-ended' : ''}">
+      <div class="hb-name"><span class="hb-title">${esc(h.name)}</span><span class="hb-meta mono" id="hb-meta-${esc(h.id)}">${meta}</span></div>
+      ${cells}${del}
+    </div>`;
+  }).join('');
+
+  const wrap = $('hb-rows');
+  keepFocus(wrap, () => {
+    wrap.innerHTML = head + (rows || '<p class="hb-empty muted">Belum ada kebiasaan.</p>');
+    const cells = [...wrap.querySelectorAll('.hb-cell:not(:disabled)')];
+    const pick = cells.find((b) => b.dataset.fkey === ui.hbFocus)
+      ?? cells.find((b) => b.dataset.d === today) ?? cells[0];
+    if (pick) { pick.tabIndex = 0; ui.hbFocus = pick.dataset.fkey; }
+  });
+
+  ui.hbPop = '';
+  renderHeat(data, today);
+}
+
+/** Whole roadmap as a contribution-style grid: columns are weeks, rows Monday..Sunday. */
+function renderHeat(data, today) {
+  const first = M[0].start;
+  const last = M[M.length - 1].end;
+  const start = weekStart(parseYmd(first));
+  const cols = Math.round((weekStart(parseYmd(last)) - start) / 604800000) + 1;
+  const all = [];
+  for (let i = 0; i < cols * 7; i++) all.push(ymd(addDays(start, i)));
+  const map = habitDayMap(data, all.filter((d) => d >= first && d <= today));
+
+  let html = '';
+  ['Sen', 'Rab', 'Jum'].forEach((l, i) => { html += `<span class="hb-rl mono" style="grid-area:${i * 2 + 2}/1">${l}</span>`; });
+  // Month label on the week column that holds the 1st of that month (first column: the start month).
+  for (let c = 0; c < cols; c++) {
+    let label = c === 0 ? parseYmd(first).getMonth() : -1;
+    for (let i = 0; i < 7 && label < 0; i++) {
+      const d = addDays(start, c * 7 + i);
+      if (d.getDate() === 1 && ymd(d) > first && ymd(d) <= last) label = d.getMonth();
+    }
+    if (label >= 0) html += `<span class="hb-ml mono" style="grid-area:1/${c + 2}">${MONTHS_ID[label]}</span>`;
+  }
+  let active = 0, perfect = 0;
+  all.forEach((d, i) => {
+    const c = Math.floor(i / 7), r = i % 7;
+    let cls;
+    let title = fmtDay(d);
+    if (d < first || d > last) cls = 'is-out';
+    else if (d > today) cls = 'is-future';
+    else {
+      const v = map.get(d);
+      cls = `l${habitLevel(v)}`;
+      if (v.done) active++;
+      if (v.total && v.done === v.total) perfect++;
+      title += ` · ${v.done}/${v.total}`;
+    }
+    if (d === today) cls += ' is-today';
+    if (d === EXAM_END) { cls += ' is-mark'; title += ' · ujian selesai'; }
+    html += `<i class="hb-sq ${cls}" style="grid-area:${r + 2}/${c + 2}" title="${title}"></i>`;
+  });
+  const el = $('hb-heat');
+  el.style.setProperty('--cols', cols);
+  el.innerHTML = html;
+  el.setAttribute('aria-label', `Peta kebiasaan ${M[0].name} sampai ${M[M.length - 1].name}: ${active} hari ada kebiasaan yang dicentang, ${perfect} hari semua kebiasaan beres.`);
+
+  // On narrow screens the grid scrolls sideways: keep today in view.
+  const sc = el.parentElement;
+  if (sc.scrollWidth > sc.clientWidth && !sc.dataset.placed) {
+    const t = el.querySelector('.is-today');
+    if (t) sc.scrollLeft = t.offsetLeft - sc.clientWidth / 2;
+    sc.dataset.placed = '1';
+  }
 }
 
 // ---------- Portfolio ----------
@@ -344,6 +484,7 @@ export function renderAll(info = {}) {
   renderPhases(data);
   renderChips(data);
   renderChecklist(data);
+  renderHabits(data);
   renderProjectViews(data);
   renderLog(data);
   renderData(data);
