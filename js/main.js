@@ -4,13 +4,16 @@ import {
   store, subscribe, loadLocal, loadRepoFile, update, editHere,
   exportJSON, importFile, clearAll, watchOtherTabs,
 } from './store.js';
-import { renderAll, ui, updateLinkHint } from './render.js';
+import { renderAll, ui, updateLinkHint, onRender } from './render.js';
 import { initNetwork } from './network.js';
+import { initHero } from './hero.js';
+import { initMotion, scrollToEl, refresh, stopScroll, startScroll } from './motion.js';
 import { coachPrompt, descPrompt, copyText } from './prompts.js';
 import { activeMonth, monthProgress, todayStr } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
+let hero = null;
 
 // ---------- Toast ----------
 let toastTimer = 0;
@@ -33,17 +36,11 @@ function toggle(id) {
   const before = month && monthProgress(store.data, month);
   ui.pop = id;
   update((d) => { if (d.done[id]) delete d.done[id]; else d.done[id] = true; });
+  if (store.data.done[id]) hero?.burst(id);
   const after = month && monthProgress(store.data, month);
-  if (month && after.done === after.total && before.done < before.total) celebrate(month);
-}
-
-function celebrate(month) {
-  toast(`( ${month.short} BERES ) + SATU BULAN SELESAI`);
-  if (reduced()) return;
-  const cap = $('capsule');
-  cap.classList.remove('party');
-  void cap.offsetWidth; // restart animation
-  cap.classList.add('party');
+  if (month && after.done === after.total && before.done < before.total) {
+    toast(`✦ ${month.name} beres — satu fase selesai`);
+  }
 }
 
 function addTask(text) {
@@ -62,10 +59,10 @@ function deleteTask(id) {
   $('new-task').focus();
 }
 
-function gotoMonth() {
-  ui.month = activeMonth().id;
+function openMonth(id) {
+  ui.month = id;
   renderAll();
-  $('roadmap').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'start' });
+  scrollToEl($('roadmap'));
   const first = document.querySelector('#tasks .cb:not(:checked):not(:disabled)') ?? $(`tab-${ui.month}`);
   first?.focus({ preventScroll: true });
 }
@@ -73,23 +70,23 @@ function gotoMonth() {
 function selectMonth(id, focus = false) {
   ui.month = id;
   renderAll();
+  refresh();
   if (focus) $(`tab-${id}`)?.focus();
 }
 
-// ---------- Count-up (once, on load) ----------
+// ---------- Count-up (once, after the hero entrance) ----------
 function countUp() {
   if (reduced()) return;
-  const els = [...document.querySelectorAll('#top [data-count], #flower [data-count]')];
+  const els = [...document.querySelectorAll('#stats [data-count], #gauge [data-count]')];
   const start = performance.now();
-  const dur = 750;
+  const dur = 1200;
   const tick = (now) => {
     const p = Math.min(1, (now - start) / dur);
-    const e = 1 - (1 - p) ** 3;
+    const e = 1 - (1 - p) ** 4;
     for (const el of els) {
       const v = Number(el.dataset.count);
       const dec = Number(el.dataset.dec) || 0;
-      const cur = v * e;
-      el.textContent = dec ? (Math.round(cur * 10) / 10).toFixed(dec).replace(/\.0$/, '') : String(Math.round(cur));
+      el.textContent = dec ? (Math.round(v * e * 10) / 10).toFixed(dec).replace(/\.0$/, '') : String(Math.round(v * e));
     }
     if (p < 1) requestAnimationFrame(tick);
   };
@@ -101,22 +98,17 @@ function setupMascots() {
   document.querySelectorAll('img[data-mascot]').forEach((img) => { img.src = MASCOT_SRC; });
 }
 
-function setupMarquee() {
-  const line = TICKER.map((t) => `( ${t} ) <b>+</b> `).join('');
-  $('marquee').innerHTML = `<span>${line}</span><span>${line}</span>`;
+function setupTicker() {
+  const line = TICKER.map((t) => `${t}<b>✦</b>`).join('');
+  $('ticker').innerHTML = `<span>${line}</span><span>${line}</span>`;
 }
 
 function setupNav() {
-  const nav = $('nav');
-  const onScroll = () => nav.classList.toggle('is-scrolled', window.scrollY > 4);
-  addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
-
   const menu = $('menu');
   const opener = $('menu-open');
-  opener.addEventListener('click', () => { menu.showModal(); opener.setAttribute('aria-expanded', 'true'); });
+  opener.addEventListener('click', () => { menu.showModal(); stopScroll(); opener.setAttribute('aria-expanded', 'true'); });
   $('menu-close').addEventListener('click', () => menu.close());
-  menu.addEventListener('close', () => opener.setAttribute('aria-expanded', 'false'));
+  menu.addEventListener('close', () => { startScroll(); opener.setAttribute('aria-expanded', 'false'); });
   menu.addEventListener('click', (e) => { if (e.target.closest('a')) menu.close(); });
 }
 
@@ -128,6 +120,19 @@ function setupLogForm() {
 
 // ---------- Events ----------
 function setupEvents() {
+  // In-page links use the smooth scroller and move focus to the target.
+  document.addEventListener('click', (e) => {
+    const a = e.target.closest('a[href^="#"]');
+    if (!a || a.dataset.action || e.defaultPrevented) return;
+    const target = document.querySelector(a.getAttribute('href'));
+    if (!target) return;
+    e.preventDefault();
+    scrollToEl(target);
+    history.replaceState(null, '', a.getAttribute('href'));
+    if (!target.hasAttribute('tabindex')) target.setAttribute('tabindex', '-1');
+    target.focus({ preventScroll: true });
+  });
+
   document.addEventListener('click', async (e) => {
     const el = e.target.closest('[data-action]');
     if (!el) return;
@@ -135,36 +140,37 @@ function setupEvents() {
 
     switch (a) {
       case 'month': selectMonth(el.dataset.month); break;
+      case 'open-month': openMonth(el.dataset.month); break;
       case 'del-task': deleteTask(el.dataset.id); break;
       case 'del-log': {
         const idx = Number(el.dataset.idx);
         update((d) => { d.log.splice(idx, 1); });
         ($('log-list').querySelector('[data-action="del-log"]') ?? $('log-note')).focus({ preventScroll: true });
-        toast('( LOG DIHAPUS )');
+        toast('Log dihapus');
         break;
       }
-      case 'goto-month': e.preventDefault(); gotoMonth(); break;
+      case 'goto-month': e.preventDefault(); openMonth(activeMonth().id); break;
       case 'goto-coach': {
         e.preventDefault();
-        $('coach').scrollIntoView({ behavior: reduced() ? 'auto' : 'smooth', block: 'center' });
+        scrollToEl($('coach'), { offset: -120 });
         const ok = await copyText(coachPrompt(store.data), { status: $('coach-status'), fallback: $('coach-fallback') });
-        if (ok) { $('coach-copy').focus({ preventScroll: true }); toast('( PROMPT AI COACH TERSALIN )'); }
+        if (ok) { $('coach-copy').focus({ preventScroll: true }); toast('✦ Prompt AI coach tersalin'); }
         break;
       }
       case 'copy-coach': {
         const ok = await copyText(coachPrompt(store.data), { status: $('coach-status'), fallback: $('coach-fallback') });
-        if (ok) toast('( PROMPT AI COACH TERSALIN )');
+        if (ok) toast('✦ Prompt AI coach tersalin');
         break;
       }
       case 'copy-desc': {
         const pid = el.dataset.pid;
         const ok = await copyText(descPrompt(store.data, pid), { status: $(`pf-${pid}-status-msg`), fallback: $(`pf-${pid}-fallback`) });
-        if (ok) toast('( PROMPT DESKRIPSI TERSALIN )');
+        if (ok) toast('✦ Prompt deskripsi tersalin');
         break;
       }
       case 'export':
         exportJSON();
-        setDataStatus('progress.json diunduh. Simpan di folder repo kalau ingin tampil di mode lihat.');
+        setDataStatus('progress.json diunduh. Simpan di root repo kalau ingin tampil di mode lihat.');
         break;
       case 'import': $('import-file').click(); break;
       case 'ask-clear':
@@ -185,14 +191,13 @@ function setupEvents() {
         break;
       case 'edit-here':
         editHere();
-        toast('( MODE EDIT ) + DATA DISALIN KE BROWSER INI');
+        toast('Mode edit — data disalin ke browser ini');
         $('main').focus({ preventScroll: true });
         break;
       default: break;
     }
   });
 
-  // Checkbox toggles
   document.addEventListener('change', (e) => {
     const cb = e.target.closest('input[data-action="toggle"]');
     if (cb) toggle(cb.dataset.id);
@@ -210,19 +215,12 @@ function setupEvents() {
     $(`tab-${M[n].id}`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
   });
 
-  // Add custom task
   $('add-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const input = $('new-task');
-    if (addTask(input.value)) {
-      input.value = '';
-      toast('( TUGAS DITAMBAHKAN )');
-    } else {
-      input.focus();
-    }
+    if (addTask(input.value)) { input.value = ''; toast('Tugas ditambahkan'); refresh(); } else input.focus();
   });
 
-  // Learning log
   $('log-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const d = $('log-date').value;
@@ -237,10 +235,10 @@ function setupEvents() {
     status.classList.remove('is-error');
     status.textContent = `Tercatat: ${Math.round(m)} menit.`;
     $('log-note').value = '';
-    toast(`( +${Math.round(m)} MENIT )`);
+    toast(`+${Math.round(m)} menit tercatat`);
+    refresh();
   });
 
-  // Project fields save as you type
   $('projects').addEventListener('input', (e) => {
     const f = e.target.closest('[data-pfield]');
     if (!f) return;
@@ -248,8 +246,8 @@ function setupEvents() {
     update((d) => { d.projects[pid][f.dataset.pfield] = f.value; }); // maxlength caps input; norm() caps on load
     updateLinkHint(store.data, pid);
   });
+  $('projects').addEventListener('toggle', refresh, true);
 
-  // Import file
   $('import-file').addEventListener('change', async (e) => {
     const file = e.target.files?.[0];
     e.target.value = '';
@@ -259,6 +257,7 @@ function setupEvents() {
       ui.month = activeMonth().id;
       setupLogForm();
       setDataStatus(`Impor berhasil: ${Object.keys(data.done).length} tugas selesai, ${data.log.length} log, ${data.custom.length} tugas sendiri.`);
+      refresh();
     } catch (err) {
       setDataStatus(`Impor gagal: ${err.message}`, true);
     }
@@ -274,18 +273,21 @@ function setDataStatus(msg, isError = false) {
 // ---------- Init ----------
 async function init() {
   setupMascots();
-  setupMarquee();
+  setupTicker();
   setupNav();
   setupLogForm();
   initNetwork($('nn'), { onToggle: toggle });
+  hero = initHero($('hero-canvas'), { reduced: reduced() });
+  onRender((data) => hero.update(data, activeMonth().id));
   subscribe(renderAll);
 
   if (!loadLocal()) await loadRepoFile();
   renderAll({ reset: true });
-  countUp();
   setupEvents();
   watchOtherTabs();
-  document.documentElement.classList.add('is-ready');
+
+  await initMotion();
+  countUp();
 }
 
 init();
