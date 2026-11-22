@@ -916,6 +916,8 @@ main { position: relative; z-index: 1; background: var(--ink); }
 code { padding: 1px 6px; border-radius: 6px; background: var(--ink-3); color: var(--fg); font-family: var(--f-mono); font-size: .86em; }
 .data-side { display: grid; gap: 18px; align-content: start; }
 .data-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.install { display: grid; gap: 12px; justify-items: start; padding-top: 18px; border-top: 1px solid var(--line); }
+.install-ios { max-width: 44ch; }
 .confirm {
   display: grid;
   gap: 16px;

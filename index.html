@@ -8,6 +8,12 @@
   <meta name="color-scheme" content="dark">
   <meta name="theme-color" content="#0B0B0C">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-title" content="AIDEV">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <script>
     /* Motion flags before first paint. Safety net: content is revealed after 3s even if JS fails. */
     (function () {
@@ -344,6 +350,11 @@
               </div>
             </div>
             <p class="status" id="data-status" aria-live="polite"></p>
+            <div class="install" id="install" hidden>
+              <p class="mono muted">Pakai seperti aplikasi — tetap jalan tanpa internet</p>
+              <button class="btn btn-lime" id="install-btn" type="button" data-action="install" hidden>Pasang di perangkat ini <span class="arr" aria-hidden="true">↓</span></button>
+              <p class="install-ios" id="install-ios" hidden>Di iPhone atau iPad: buka di Safari, ketuk <strong>Bagikan</strong>, lalu <strong>Tambah ke Layar Utama</strong>.</p>
+            </div>
           </div>
         </div>
       </div>

@@ -259,6 +259,7 @@ function setupEvents() {
         setDataStatus('Semua data di browser ini sudah dihapus.');
         $('ask-clear').focus();
         break;
+      case 'install': install(); break;
       case 'edit-here':
         editHere();
         toast('Mode edit — data disalin ke browser ini');
@@ -361,6 +362,37 @@ function setupEvents() {
   });
 }
 
+// ---------- Install (PWA) ----------
+let installEvent = null;
+function setupInstall() {
+  if ('serviceWorker' in navigator) {
+    addEventListener('load', () => navigator.serviceWorker.register('sw.js').catch((err) => console.warn('[tracker] service worker:', err)));
+  }
+  const standalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone;
+  if (standalone) return;
+  const ios = /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+  if (ios) { $('install').hidden = false; $('install-ios').hidden = false; }
+  addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    installEvent = e;
+    $('install').hidden = false;
+    $('install-btn').hidden = false;
+  });
+  addEventListener('appinstalled', () => {
+    installEvent = null;
+    $('install').hidden = true;
+    toast('✦ Terpasang — buka dari layar utama');
+  });
+}
+
+async function install() {
+  if (!installEvent) return;
+  installEvent.prompt();
+  await installEvent.userChoice;
+  installEvent = null;
+  $('install-btn').hidden = true;
+}
+
 function setDataStatus(msg, isError = false) {
   const el = $('data-status');
   el.classList.toggle('is-error', isError);
@@ -373,6 +405,7 @@ async function init() {
   setupTicker();
   setupNav();
   setupLogForm();
+  setupInstall();
   initNetwork($('nn'), { onToggle: toggle });
   hero = initHero($('hero-canvas'), { reduced: reduced() });
   onRender((data) => hero.update(data, activeMonth().id));
