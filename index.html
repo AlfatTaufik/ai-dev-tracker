@@ -34,10 +34,11 @@
   <link rel="stylesheet" href="css/components.css">
   <link rel="stylesheet" href="css/sections.css">
 
-  <!-- Motion libraries (optional: the site works without them) -->
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
-  <script defer src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js"></script>
+  <!-- Motion libraries (optional: the site works without them). Pinned with SRI hashes:
+       the page holds a GitHub token when sync is on, so third-party code must be exactly this. -->
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous"></script>
+  <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d" crossorigin="anonymous"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" integrity="sha384-B2WBjDzEjJpYvhmi2UyEn7rektqkf5suS6sNoyyrf0EBAwBHdkiXxIlU0V5Ru2ed" crossorigin="anonymous"></script>
   <script type="module" src="js/main.js"></script>
 </head>
 <body>
@@ -343,7 +344,7 @@
               <button class="btn btn-danger edit-only" id="ask-clear" type="button" data-action="ask-clear">Hapus semua data</button>
             </div>
             <div class="confirm" id="confirm" role="group" aria-labelledby="confirm-text" hidden>
-              <p id="confirm-text"><strong>Hapus semua progres di browser ini?</strong> Tugas, proyek, kebiasaan, dan log akan hilang dan tidak bisa dikembalikan. Ekspor dulu kalau ragu.</p>
+              <p id="confirm-text"><strong>Hapus semua progres di browser ini?</strong> Tugas, proyek, kebiasaan, dan log akan hilang dan tidak bisa dikembalikan. Ekspor dulu kalau ragu.<span id="confirm-sync" hidden> <strong>Sinkron aktif: data di semua perangkat juga ikut terhapus.</strong> Untuk mereset perangkat ini saja, putuskan sinkron dulu.</span></p>
               <div class="confirm-actions">
                 <button class="btn btn-danger-solid btn-sm" type="button" data-action="do-clear">Ya, hapus semua</button>
                 <button class="btn btn-ghost btn-sm" id="confirm-cancel" type="button" data-action="cancel-clear">Batal</button>
@@ -355,6 +356,36 @@
               <button class="btn btn-lime" id="install-btn" type="button" data-action="install" hidden>Pasang di perangkat ini <span class="arr" aria-hidden="true">↓</span></button>
               <p class="install-ios" id="install-ios" hidden>Di iPhone atau iPad: buka di Safari, ketuk <strong>Bagikan</strong>, lalu <strong>Tambah ke Layar Utama</strong>.</p>
             </div>
+          </div>
+        </div>
+
+        <div class="sync-card edit-only" id="sync" aria-labelledby="sync-title">
+          <div class="sync-text">
+            <p class="sync-state mono" id="sync-state"><span class="sync-dot" aria-hidden="true"></span><span id="sync-state-text">Belum terhubung</span></p>
+            <h3 class="sync-h" id="sync-title">Satu progres di <em>semua perangkat</em>.</h3>
+            <p class="muted" id="sync-desc">Progres disimpan di Gist rahasia di akun GitHub-mu, lalu HP, laptop, dan tablet memakai token yang sama. Centang di HP, muncul di laptop. Tanpa server lain.</p>
+          </div>
+          <div class="sync-side">
+            <div id="sync-off">
+              <ol class="sync-steps">
+                <li><a id="sync-token-link" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=AI%20Dev%20Tracker" target="_blank" rel="noopener noreferrer">Buat token GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (tab baru)</span></a>. Centang <strong>gist</strong> saja, pilih masa berlaku, klik <strong>Generate token</strong>, lalu salin.</li>
+                <li>Tempel di bawah, klik <strong>Hubungkan</strong>.</li>
+                <li>Di perangkat lain, buka situs ini dan tempel token yang sama.</li>
+              </ol>
+              <form class="sync-form" id="sync-form" novalidate autocomplete="off">
+                <label class="field"><span>Token GitHub</span><input class="input" id="sync-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ghp_…"></label>
+                <button class="btn btn-lime" type="submit" data-magnetic>Hubungkan <span class="arr" aria-hidden="true">→</span></button>
+              </form>
+              <p class="mono muted sync-note">Token hanya tersimpan di browser perangkat ini dan hanya bisa membaca/menulis gist. Simpan di password manager supaya mudah dipakai lagi.</p>
+            </div>
+            <div id="sync-on" hidden>
+              <p>Setiap perubahan dikirim otomatis. Perubahan dari perangkat lain dimuat saat halaman dibuka, kembali aktif, atau tiap menit.</p>
+              <div class="data-actions">
+                <button class="btn" type="button" data-action="sync-now">Sinkron sekarang</button>
+                <button class="btn btn-ghost" type="button" data-action="sync-off">Putuskan di perangkat ini</button>
+              </div>
+            </div>
+            <p class="status" id="sync-status" aria-live="polite"></p>
           </div>
         </div>
       </div>

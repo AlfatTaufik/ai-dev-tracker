@@ -183,6 +183,15 @@ export function update(fn) {
   return true;
 }
 
+/** Replace data with a synced copy. Keeps its `updated` stamp. */
+export function replaceData(data, info = {}) {
+  store.data = data;
+  store.readOnly = false;
+  store.source = 'local';
+  try { localStorage.setItem(KEY, JSON.stringify(data)); } catch (err) { console.warn('[tracker] could not save:', err); }
+  emit({ ...info, fromSync: true });
+}
+
 /** Leave view mode: copy the displayed data into this browser. */
 export function editHere() {
   store.readOnly = false;

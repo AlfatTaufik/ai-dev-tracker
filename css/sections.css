@@ -916,6 +916,37 @@ main { position: relative; z-index: 1; background: var(--ink); }
 code { padding: 1px 6px; border-radius: 6px; background: var(--ink-3); color: var(--fg); font-family: var(--f-mono); font-size: .86em; }
 .data-side { display: grid; gap: 18px; align-content: start; }
 .data-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+.sync-card {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 80px);
+  margin-top: clamp(40px, 5vw, 72px);
+  padding: clamp(22px, 3.4vw, 48px);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-lg);
+  background: var(--ink-2);
+}
+@media (max-width: 899px) { .sync-card { grid-template-columns: minmax(0, 1fr); } }
+.sync-text { display: grid; gap: 18px; align-content: start; }
+.sync-h { font-size: var(--fs-h3); font-weight: 500; letter-spacing: -.04em; line-height: 1.04; }
+.sync-h em { color: var(--lime); }
+.sync-state { display: inline-flex; align-items: center; gap: 10px; color: var(--mute); text-transform: uppercase; font-size: 11.5px; }
+.sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--mute); }
+.sync-card[data-state="idle"] .sync-dot { background: var(--lime); box-shadow: 0 0 0 4px rgba(212, 255, 58, .18); }
+.sync-card[data-state="idle"] .sync-state { color: var(--lime); }
+.sync-card[data-state="busy"] .sync-dot { background: var(--bone); animation: sync-pulse 900ms var(--ease-io) infinite alternate; }
+.sync-card[data-state="offline"] .sync-dot { background: #FFB547; }
+.sync-card[data-state="error"] .sync-dot { background: var(--danger); }
+.sync-card[data-state="error"] .sync-state { color: var(--danger); }
+@keyframes sync-pulse { to { opacity: .25; } }
+.sync-side, #sync-off, #sync-on { display: grid; gap: 18px; align-content: start; }
+#sync-off[hidden], #sync-on[hidden] { display: none; }
+.sync-steps { display: grid; gap: 10px; padding-left: 1.3em; list-style: decimal; }
+.sync-steps li::marker { font-family: var(--f-mono); color: var(--mute); }
+.sync-steps a { color: var(--lime); text-decoration: underline; text-underline-offset: 4px; }
+.sync-form { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 16px; align-items: end; }
+@media (max-width: 480px) { .sync-form { grid-template-columns: minmax(0, 1fr); } .sync-form .btn { justify-self: start; } }
+.sync-note { font-size: 11.5px; line-height: 1.6; text-transform: none; }
 .install { display: grid; gap: 12px; justify-items: start; padding-top: 18px; border-top: 1px solid var(--line); }
 .install-ios { max-width: 44ch; }
 .confirm {

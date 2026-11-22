@@ -9,6 +9,7 @@ import { initNetwork } from './network.js';
 import { initHero } from './hero.js';
 import { initMotion, scrollToEl, refresh, stopScroll, startScroll } from './motion.js';
 import { coachPrompt, descPrompt, copyText } from './prompts.js';
+import { startSync, onSync, connect, disconnect, syncNow } from './sync.js';
 import { activeMonth, monthProgress, todayStr, habitActive, habitsToday } from './util.js';
 
 const $ = (id) => document.getElementById(id);
@@ -260,6 +261,12 @@ function setupEvents() {
         $('ask-clear').focus();
         break;
       case 'install': install(); break;
+      case 'sync-now': syncNow(); break;
+      case 'sync-off':
+        disconnect();
+        $('sync-status').textContent = 'Sinkron diputus di perangkat ini. Data tetap ada di sini dan di gist.';
+        $('sync-token').focus();
+        break;
       case 'edit-here':
         editHere();
         toast('Mode edit — data disalin ke browser ini');
@@ -362,6 +369,54 @@ function setupEvents() {
   });
 }
 
+// ---------- Sync between devices ----------
+function renderSync(s) {
+  const card = $('sync');
+  card.dataset.state = s.state;
+  $('sync-off').hidden = s.state !== 'off' && s.state !== 'error'; // on error the form stays, to paste a new token
+  $('sync-on').hidden = s.state === 'off';
+  const hm = (iso) => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')}`; };
+  $('sync-state-text').textContent = {
+    off: 'Belum terhubung',
+    idle: s.last ? `Tersinkron · ${hm(s.last)}` : 'Tersinkron',
+    busy: 'Menyinkronkan…',
+    offline: 'Offline · menunggu internet',
+    error: 'Sinkron bermasalah',
+  }[s.state];
+  const status = $('sync-status');
+  if (s.state === 'error' || s.state === 'offline') {
+    status.classList.toggle('is-error', s.state === 'error');
+    status.textContent = s.msg;
+  } else if (status.classList.contains('is-error')) {
+    status.classList.remove('is-error');
+    status.textContent = '';
+  }
+  $('confirm-sync').hidden = s.state === 'off';
+}
+
+function setupSync() {
+  onSync(renderSync);
+  $('sync-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('sync-token');
+    const status = $('sync-status');
+    try {
+      const { created } = await connect(input.value);
+      input.value = '';
+      status.classList.remove('is-error');
+      status.textContent = created
+        ? 'Terhubung. Gist baru dibuat dari progres di perangkat ini. Sekarang tempel token yang sama di perangkat lain.'
+        : 'Terhubung ke gist yang sudah ada. Progres dari perangkat lain sudah digabung ke sini.';
+      toast('✦ Sinkron aktif');
+      refresh();
+    } catch (err) {
+      status.classList.add('is-error');
+      status.textContent = err.message === 'offline' ? 'Tidak ada internet. Coba lagi saat online.' : err.message;
+      input.focus();
+    }
+  });
+}
+
 // ---------- Install (PWA) ----------
 let installEvent = null;
 function setupInstall() {
@@ -406,15 +461,18 @@ async function init() {
   setupNav();
   setupLogForm();
   setupInstall();
+  setupSync();
   initNetwork($('nn'), { onToggle: toggle });
   hero = initHero($('hero-canvas'), { reduced: reduced() });
   onRender((data) => hero.update(data, activeMonth().id));
   subscribe(renderAll);
+  subscribe((info) => { if (info.pulled) toast('↓ Progres dari perangkat lain dimuat'); });
 
   if (!loadLocal()) await loadRepoFile();
   renderAll({ reset: true });
   setupEvents();
   watchOtherTabs();
+  startSync();
 
   await initMotion();
   countUp();

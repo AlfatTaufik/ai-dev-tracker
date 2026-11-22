@@ -28,8 +28,34 @@ Buka link live di HP, lalu:
 
 Setelah dipasang, tracker terbuka seperti aplikasi dan tetap jalan tanpa internet
 (`sw.js` menyimpan semua file). Kalau ada versi baru di GitHub, versi itu dipakai saat online.
-Data tetap per perangkat: progres di HP dan di laptop tidak tersinkron otomatis. Pakai
-ekspor/impor `progress.json` untuk memindahkannya.
+Supaya progres sama di HP dan laptop, aktifkan sinkron (lihat di bawah).
+
+## Sinkron antar perangkat
+
+Progres bisa disimpan di **Gist rahasia** di akun GitHub-mu, jadi HP, laptop, dan tablet
+melihat data yang sama. Tidak perlu server atau akun lain.
+
+1. Buat token di https://github.com/settings/tokens/new?scopes=gist&description=AI%20Dev%20Tracker
+   (classic token). Centang **gist** saja, pilih masa berlaku, lalu **Generate token**.
+2. Di section **Data**, tempel token itu lalu klik **Hubungkan**. Perangkat pertama membuat
+   gist `aidev-tracker.json`.
+3. Di perangkat lain, tempel token yang sama. Gist yang sama ditemukan otomatis dan
+   progresnya digabung.
+
+Cara kerjanya (`js/sync.js`, `js/merge.js`):
+
+- Setiap perubahan dikirim sekitar 1,5 detik kemudian. Perubahan dari perangkat lain dimuat
+  saat halaman dibuka, kembali aktif, kembali online, dan tiap menit.
+- Penggabungan tiga arah terhadap versi sinkron terakhir: centang, hapus centang, log, dan
+  kebiasaan dari dua perangkat tetap aman walaupun keduanya sempat offline. Kalau kolom yang
+  sama diubah di dua tempat, perangkat yang sedang menyinkron menang.
+- Token disimpan di localStorage perangkat itu saja (kunci `aidev-sync-v1`), terpisah dari
+  data. **Putuskan di perangkat ini** menghapus token; data tetap ada.
+- **Hapus semua data** saat sinkron aktif juga menghapus data di semua perangkat. Putuskan
+  sinkron dulu kalau hanya ingin mereset satu perangkat.
+- Gist rahasia tidak muncul di profilmu, tapi siapa pun yang tahu URL-nya bisa membacanya.
+- Script dari CDN dikunci dengan hash SRI, karena halaman menyimpan token.
+- Kalau token kedaluwarsa, status berubah merah. Buat token baru dan tempel lagi.
 
 ## Menjalankan di komputer
 
@@ -57,7 +83,9 @@ js/hero.js            jaringan saraf 3D di hero (canvas 2D, tanpa library)
 js/motion.js          Lenis + GSAP ScrollTrigger, intro, cursor, tombol magnetik, preview proyek
 js/network.js         grafik jaringan SVG yang bisa diklik (Enter/Spasi, panah)
 js/prompts.js         prompt AI coach + deskripsi proyek, salin dengan textarea cadangan
-js/main.js            inisialisasi, event listener, tombol pasang PWA
+js/main.js            inisialisasi, event listener, tombol pasang PWA, UI sinkron
+js/sync.js            sinkron lewat GitHub Gist (tarik, gabung, kirim)
+js/merge.js           penggabungan tiga arah untuk sinkron
 sw.js                 service worker (offline): file sendiri network first, CDN cache first
 manifest.webmanifest  nama aplikasi, ikon, warna, pintasan ke Kebiasaan dan Log
 assets/mascot.svg     maskot default (neuron), dipakai di kartu AI coach
