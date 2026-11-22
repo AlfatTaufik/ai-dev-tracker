@@ -2,14 +2,14 @@
 // Own files: network first (so a new deploy shows up right away), cache as fallback.
 // If the network is slow, the cached copy is served after a short wait and refreshed in the background.
 // CDN files (fonts, GSAP, Lenis, Firebase SDK) have versioned URLs, so they are cache first.
-const SHELL = 'aidev-shell-v3';
+const SHELL = 'aidev-shell-v4';
 const CDN = 'aidev-cdn-v2'; // v2: scripts now load with crossorigin (SRI)
 const FILES = [
   './', 'index.html', 'manifest.webmanifest', 'progress.json',
   'css/tokens.css', 'css/base.css', 'css/components.css', 'css/sections.css',
   'js/main.js', 'js/data.js', 'js/store.js', 'js/util.js', 'js/render.js', 'js/network.js',
   'js/hero.js', 'js/motion.js', 'js/prompts.js', 'js/merge.js', 'js/sync.js',
-  'js/account.js', 'js/firebase-config.js', 'js/focus.js',
+  'js/account.js', 'js/firebase-config.js', 'js/focus.js', 'js/resources.js',
   'assets/favicon.svg', 'assets/mascot.svg', 'assets/icon-192.png', 'assets/icon-512.png', 'assets/apple-touch-icon.png',
 ];
 // www.gstatic.com serves the pinned Firebase SDK (only when accounts are on). Firebase's own

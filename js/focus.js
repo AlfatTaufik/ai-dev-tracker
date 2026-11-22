@@ -3,10 +3,10 @@
 // Finished focus sessions go straight into the study log. Timer state is kept per device
 // (localStorage 'aidev-focus-v1'), so a reload or a closed tab doesn't lose a running session.
 import { store, subscribe } from './store.js';
-import { activeMonth, monthTasks, todayStr, ymd } from './util.js';
+import { activeMonth, monthTasks, todayStr, ymd, parseYmd, focusStats, fmtHours, esc } from './util.js';
+import { FOCUS_TAG, DAYS_ID, DAYS_LONG } from './data.js';
 
 const KEY = 'aidev-focus-v1';
-export const FOCUS_TAG = 'Pomodoro';
 const EVERY = 4; // focus sessions before a long break
 const MODES = {
   focus: { label: 'Fokus', min: 5, max: 60, def: 25 },
@@ -317,6 +317,16 @@ function renderToday() {
   $('fo-today-n').textContent = mine.length;
   $('fo-today-min').textContent = min;
   $('fo-today-dots').innerHTML = mine.slice(0, 16).map(() => '<i></i>').join('') + (mine.length > 16 ? `<span>+${mine.length - 16}</span>` : '');
+
+  const f = focusStats(store.data, 7);
+  const max = Math.max(60, ...f.perDay.map((d) => d.min));
+  $('fo-week-total').textContent = fmtHours(f.total);
+  $('fo-bars').innerHTML = f.perDay.map((d) => `<li class="${d.d === today ? 'is-today' : ''}${d.min ? ' has' : ''}">
+      <i style="--h:${((d.min / max) * 100).toFixed(1)}%"></i><span>${DAYS_ID[parseYmd(d.d).getDay()]}</span></li>`).join('');
+  $('fo-week-sr').textContent = `Menit fokus 7 hari terakhir: ${f.perDay.map((d) => `${DAYS_LONG[parseYmd(d.d).getDay()]} ${d.min}`).join(', ')}.`;
+  $('fo-week-meta').innerHTML = f.sessions
+    ? `Rata-rata ${f.avg} menit per sesi${f.top ? ` · paling banyak: <strong>${esc(f.top[0])}</strong> (${fmtHours(f.top[1])} jam)` : ''}`
+    : 'Belum ada sesi fokus dalam 7 hari terakhir.';
 }
 
 function renderNotifyBtn() {

@@ -128,8 +128,10 @@ export const HABIT_DEFAULTS = [
   { id: 'h-sleep', name: 'Tidur sebelum jam 12', goal: 7, end: '' },
 ];
 export const HABIT_MAX = 12;
-// A learning-log session of at least this many minutes also ticks the 'h-ai' habit for that day.
+// Once a day's logged minutes reach this, the 'h-ai' habit is ticked for that day.
 export const HABIT_AI_MIN = 30;
+// Log notes of finished pomodoro sessions start with this word.
+export const FOCUS_TAG = 'Pomodoro';
 
 export const DAYS_ID = ['Min', 'Sen', 'Sel', 'Rab', 'Kam', 'Jum', 'Sab'];
 export const DAYS_LONG = ['Minggu', 'Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu'];

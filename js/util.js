@@ -1,5 +1,5 @@
 // Small helpers: escaping, dates, derived stats.
-import { M, P, WEEK_TARGET, MONTHS_ID, MONTHS_LONG, DAYS_ID } from './data.js';
+import { M, P, WEEK_TARGET, MONTHS_ID, MONTHS_LONG, DAYS_ID, DAYS_LONG, FOCUS_TAG } from './data.js';
 
 /** Escape any user text before it goes into HTML (text or attribute). */
 export function esc(value) {
@@ -194,3 +194,68 @@ export function perfectDays(data, today = todayStr()) {
   for (const [, v] of habitDayMap(data, [...all].filter((d) => d <= today))) if (v.total && v.done === v.total) n++;
   return n;
 }
+
+// ---------- Focus + weekly review ----------
+export const isFocus = (e) => e.n.startsWith(FOCUS_TAG);
+/** Task text from a pomodoro log note ("Pomodoro · task"), or '' for free study. */
+export const focusTask = (e) => e.n.slice(FOCUS_TAG.length).replace(/^\s*·\s*/, '');
+
+/** Focus minutes per day for the last n days, plus the most focused task. */
+export function focusStats(data, n = 7, now = new Date()) {
+  const days = lastDays(n, now);
+  const from = days[0];
+  const entries = data.log.filter((e) => isFocus(e) && e.d >= from);
+  const perDay = days.map((d) => ({ d, min: entries.filter((e) => e.d === d).reduce((s, e) => s + e.m, 0) }));
+  const byTask = new Map();
+  for (const e of entries) { const t = focusTask(e); if (t) byTask.set(t, (byTask.get(t) ?? 0) + e.m); }
+  const top = [...byTask].sort((a, b) => b[1] - a[1])[0] ?? null;
+  const total = entries.reduce((s, e) => s + e.m, 0);
+  return { perDay, total, sessions: entries.length, avg: entries.length ? Math.round(total / entries.length) : 0, top };
+}
+
+/** Monday (YYYY-MM-DD) of the week that contains the given day. */
+export const weekOf = (day = todayStr()) => ymd(weekStart(parseYmd(day)));
+
+/** Everything the weekly review shows for the Monday-Sunday week starting at `start`. */
+export function weekSummary(data, start, today = todayStr()) {
+  const days = Array.from({ length: 7 }, (_, i) => ymd(addDays(parseYmd(start), i)));
+  const end = days[6];
+  const inWeek = (e) => e.d >= start && e.d <= end;
+  const log = data.log.filter(inWeek);
+  const minutes = log.reduce((s, e) => s + e.m, 0);
+  const focus = log.filter(isFocus);
+  const perDay = days.map((d) => log.filter((e) => e.d === d).reduce((s, e) => s + e.m, 0));
+  const bestI = perDay.indexOf(Math.max(...perDay));
+  const upto = today < end ? today : end;
+
+  const habits = [];
+  for (const h of data.habits) {
+    const live = days.filter((d) => habitActive(h, d) && d <= upto);
+    if (!live.length) continue;
+    const done = h.days.filter((d) => d >= start && d <= end).length;
+    const want = Math.min(h.goal, days.filter((d) => habitActive(h, d)).length);
+    habits.push({ h, done, want, met: done >= want, gap: want - done });
+  }
+  const missed = habits.filter((x) => x.gap > 0).sort((a, b) => b.gap - a.gap)[0] ?? null;
+
+  const due = [];
+  for (const m of M) for (const t of m.tasks) if (t.d >= start && t.d <= end) due.push({ ...t, done: !!data.done[t.id] });
+
+  return {
+    start, end, days,
+    minutes,
+    hit: minutes >= WEEK_TARGET * 60,
+    activeDays: new Set(log.map((e) => e.d)).size,
+    focusSessions: focus.length,
+    focusMin: focus.reduce((s, e) => s + e.m, 0),
+    best: perDay[bestI] ? { day: days[bestI], name: DAYS_LONG[parseYmd(days[bestI]).getDay()], min: perDay[bestI] } : null,
+    habits,
+    habitsMet: habits.filter((x) => x.met).length,
+    missed,
+    due,
+    overdue: overdue(data, upto < today ? addDaysYmd(end, 1) : today),
+    review: data.reviews[start] ?? {},
+    promise: data.reviews[ymd(addDays(parseYmd(start), -7))]?.next ?? '',
+  };
+}
+const addDaysYmd = (s, n) => ymd(addDays(parseYmd(s), n));

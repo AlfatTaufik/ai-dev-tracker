@@ -6,16 +6,26 @@ import {
   esc, safeUrl, activeMonth, monthProgress, totals, thisWeekMinutes, weeks, streak,
   projectsOnline, nextDeadline, overdue, daysUntil, fmtHours, fmtShort, fmtLong, fmtDay, todayStr, ymd, parseYmd,
   addDays, weekStart, habitActive, lastDays, habitWeekCount, habitStreak, habitsToday, habitDayMap,
-  habitConsistency, perfectDays,
+  habitConsistency, perfectDays, weekOf, weekSummary,
 } from './util.js';
+import { resourcesFor } from './resources.js';
 
 export const ui = {
   month: activeMonth().id, // month shown in the checklist
   pop: null,               // node id that just toggled (animation)
   hbFocus: '',             // habit grid cell that holds the roving tabindex
-  hbArmed: '',
-  hbPop: '',               // habit cell that just toggled (animation)             // habit whose delete button waits for a second click
+  hbArmed: '',             // habit whose delete button waits for a second click
+  hbPop: '',               // habit cell that just toggled (animation)
+  // Weekly review: on Monday the week that just ended is the one to review.
+  rvWeek: new Date().getDay() === 1 ? 'last' : 'this',
+  resOpen: new Set(),      // tasks whose learning links are expanded
 };
+
+/** Monday of the week the review card shows. */
+export function reviewStart() {
+  const thisWeek = weekOf();
+  return ui.rvWeek === 'last' ? ymd(addDays(parseYmd(thisWeek), -7)) : thisWeek;
+}
 
 const $ = (id) => document.getElementById(id);
 const monthWord = (m) => MONTHS_LONG[parseYmd(m.start).getMonth()];
@@ -157,10 +167,36 @@ function renderChecklist(data) {
           <input class="cb" type="checkbox" data-action="toggle" data-id="${esc(t.id)}" data-fkey="cb-${esc(t.id)}" ${done ? 'checked' : ''} ${ro ? 'disabled' : ''}>
           <span class="task-body"><span class="task-text">${esc(t.t)}</span>${date}</span>
         </label>
+        ${resources(data, t, ro)}
         ${del}
       </li>`;
     }).join('') || '<li class="task-empty muted">Belum ada tugas.</li>';
   });
+}
+
+/** "Sumber" toggle + panel with curated and own learning links for one task. */
+function resources(data, t, ro) {
+  const id = esc(t.id);
+  const curated = resourcesFor(t.id);
+  const own = data.links[t.id] ?? [];
+  const n = curated.length + own.length;
+  if (!n && ro) return '';
+  const open = ui.resOpen.has(t.id);
+  const label = (l) => l.t || l.u.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '').slice(0, 60);
+  const item = (l, mine) => `<li>
+      <a href="${esc(safeUrl(l.u))}" target="_blank" rel="noopener noreferrer">${esc(label(l))} <span aria-hidden="true">↗</span><span class="sr-only"> (tab baru)</span></a>
+      ${mine ? '<span class="res-mine mono">Milikmu</span>' : ''}
+      ${mine && !ro ? `<button class="icon-btn res-del" type="button" data-action="del-link" data-id="${id}" data-u="${esc(l.u)}" data-fkey="rdel-${id}-${esc(l.u)}" aria-label="Hapus link: ${esc(label(l))}">×</button>` : ''}
+    </li>`;
+  const panel = open ? `<div class="res" id="res-${id}">
+      ${n ? `<ul class="res-list">${curated.map((l) => item(l, false)).join('')}${own.map((l) => item(l, true)).join('')}</ul>` : '<p class="muted res-empty">Belum ada sumber. Tempel link yang kamu pakai.</p>'}
+      ${ro ? '' : `<form class="res-form" data-id="${id}" novalidate>
+        <label class="sr-only" for="res-u-${id}">Link belajar sendiri untuk: ${esc(t.t)}</label>
+        <input class="input" id="res-u-${id}" name="u" type="url" inputmode="url" maxlength="300" placeholder="+ Tempel link sendiri (https://…)" data-fkey="resu-${id}">
+        <button class="btn btn-sm btn-ghost" type="submit">Simpan</button>
+      </form>`}
+    </div>` : '';
+  return `<button class="res-btn mono" type="button" data-action="res-toggle" data-id="${id}" data-fkey="res-${id}" aria-expanded="${open}"${open ? ` aria-controls="res-${id}"` : ''}>Sumber${n ? ` <span>${n}</span>` : ''}</button>${panel}`;
 }
 
 // ---------- Habits ----------
@@ -452,6 +488,48 @@ function renderLog(data) {
 }
 
 // ---------- Data + mode ----------
+// ---------- Weekly review ----------
+function renderReview(data) {
+  const start = reviewStart();
+  const w = weekSummary(data, start);
+  const s = parseYmd(w.start), e = parseYmd(w.end);
+  const range = s.getMonth() === e.getMonth()
+    ? `${s.getDate()}–${e.getDate()} <em>${MONTHS_LONG[e.getMonth()]}</em>`
+    : `${s.getDate()} ${MONTHS_ID[s.getMonth()]} – ${e.getDate()} <em>${MONTHS_LONG[e.getMonth()]}</em>`;
+  $('rv-title').innerHTML = range;
+  document.querySelectorAll('[data-action="rv-week"]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.wk === ui.rvWeek)));
+
+  const day = new Date().getDay();
+  const nudge = $('rv-nudge');
+  const empty = !Object.keys(w.review).length;
+  nudge.hidden = !(empty && ((day === 0 && ui.rvWeek === 'this') || (day === 1 && ui.rvWeek === 'last')));
+  nudge.textContent = day === 0 ? 'Hari Minggu — saatnya review. Lima menit cukup.' : 'Minggu lalu belum direview. Lima menit cukup.';
+
+  $('rv-stats').innerHTML = `
+    <div><dt class="mono">Jam belajar</dt><dd>${fmtHours(w.minutes)}<small>/${WEEK_TARGET} jam</small></dd></div>
+    <div><dt class="mono">Pomodoro</dt><dd>${w.focusSessions}<small> sesi</small></dd></div>
+    <div><dt class="mono">Hari aktif</dt><dd>${w.activeDays}<small>/7</small></dd></div>
+    <div><dt class="mono">Kebiasaan</dt><dd>${w.habitsMet}<small>/${w.habits.length} target</small></dd></div>`;
+
+  const notes = [];
+  if (w.promise) notes.push(`<li><span class="mono muted">Janji minggu lalu</span>${esc(w.promise)}</li>`);
+  if (w.best) notes.push(`<li><span class="mono muted">Hari terbaik</span>${w.best.name}, ${w.best.min} menit</li>`);
+  if (w.due.length) notes.push(`<li><span class="mono muted">Tenggat minggu ini</span>${w.due.filter((t) => t.done).length} dari ${w.due.length} selesai${w.due.some((t) => !t.done) ? `: ${w.due.filter((t) => !t.done).map((t) => esc(t.t)).join(', ')}` : ''}</li>`);
+  if (w.overdue.length) notes.push(`<li class="is-warn"><span class="mono">Tertinggal</span>${w.overdue.length} tugas, mulai dari ${esc(w.overdue[0].t)}</li>`);
+  if (w.missed) notes.push(`<li class="is-warn"><span class="mono">Paling sering bolong</span>${esc(w.missed.h.name)} (${w.missed.done}/${w.missed.want})</li>`);
+  if (!notes.length) notes.push('<li><span class="mono muted">Catatan</span>Belum ada aktivitas tercatat minggu ini.</li>');
+  $('rv-notes').innerHTML = `<ul class="rv-list">${notes.join('')}</ul>`;
+
+  // Don't overwrite the box being typed in.
+  const form = $('rv-form');
+  if (form.dataset.week !== start) $('rv-saved').textContent = '';
+  form.dataset.week = start;
+  form.querySelectorAll('textarea').forEach((t) => {
+    t.disabled = store.readOnly;
+    if (document.activeElement !== t) t.value = w.review[t.dataset.rv] ?? '';
+  });
+}
+
 function renderData(data) {
   const el = $('data-updated');
   if (data.updated) {
@@ -466,6 +544,12 @@ function renderData(data) {
 function renderMode() {
   document.body.classList.toggle('is-readonly', store.readOnly);
   $('viewbar').hidden = !store.readOnly;
+  const shared = store.source === 'share';
+  $('viewbar-text').textContent = shared
+    ? 'Mode lihat — progres yang dibagikan. Hanya bisa dilihat.'
+    : 'Mode lihat — progres dari progress.json. Perubahan tidak disimpan.';
+  $('edit-here').hidden = shared;
+  $('view-mine').hidden = !shared;
 }
 
 const listeners = new Set();
@@ -487,6 +571,7 @@ export function renderAll(info = {}) {
   renderHabits(data);
   renderProjectViews(data);
   renderLog(data);
+  renderReview(data);
   renderData(data);
   ui.pop = null;
   listeners.forEach((fn) => fn(data, info));

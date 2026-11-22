@@ -35,7 +35,7 @@
   <link rel="stylesheet" href="css/sections.css">
 
   <!-- Motion libraries (optional: the site works without them). Pinned with SRI hashes:
-       the page holds a GitHub token when sync is on, so third-party code must be exactly this. -->
+       the page holds a login session, so third-party code must be exactly this. -->
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js" integrity="sha384-g4NTh/Iv5PPU4xPyhEWqPcwtNXOvdaDI8LLnyYfyNZOjKJeYQyjzQ9X5275eBjpt" crossorigin="anonymous"></script>
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js" integrity="sha384-Z3REaz79l2IaAZqJsSABtTbhjgOUYyV3p90XNnAPCSHg3EMTz1fouunq9WZRtj3d" crossorigin="anonymous"></script>
   <script defer src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" integrity="sha384-B2WBjDzEjJpYvhmi2UyEn7rektqkf5suS6sNoyyrf0EBAwBHdkiXxIlU0V5Ru2ed" crossorigin="anonymous"></script>
@@ -98,8 +98,9 @@
   <!-- ===== View mode bar ===== -->
   <div class="viewbar" id="viewbar" hidden>
     <div class="wrap viewbar-inner">
-      <p class="mono"><span class="live"></span>Mode lihat — progres dari progress.json. Perubahan tidak disimpan.</p>
-      <button class="btn btn-lime btn-sm" type="button" data-action="edit-here">Edit di browser ini</button>
+      <p class="mono"><span class="live"></span><span id="viewbar-text">Mode lihat — progres dari progress.json. Perubahan tidak disimpan.</span></p>
+      <button class="btn btn-lime btn-sm" id="edit-here" type="button" data-action="edit-here">Edit di browser ini</button>
+      <a class="btn btn-lime btn-sm" id="view-mine" href="./" hidden>Buka progresku</a>
     </div>
   </div>
 
@@ -332,6 +333,12 @@
               <p class="mono muted">Hari ini</p>
               <p class="fo-today-num"><span id="fo-today-n">0</span> <small>sesi</small> · <span id="fo-today-min">0</span> <small>menit fokus</small></p>
               <p class="fo-today-dots" id="fo-today-dots" aria-hidden="true"></p>
+              <div class="fo-week">
+                <p class="mono muted">7 hari terakhir · <span id="fo-week-total">0</span> jam fokus</p>
+                <ol class="fo-bars" id="fo-bars" aria-hidden="true"></ol>
+                <p class="sr-only" id="fo-week-sr"></p>
+                <p class="fo-week-meta muted" id="fo-week-meta"></p>
+              </div>
             </div>
 
             <details class="fo-settings">
@@ -379,6 +386,37 @@
           <div class="entries">
             <h3 class="mono chart-title">10 catatan terbaru</h3>
             <ul class="log-list" id="log-list"></ul>
+          </div>
+        </div>
+
+        <div class="review" id="review" aria-labelledby="rv-title">
+          <div class="rv-head">
+            <div>
+              <p class="mono muted">Review mingguan</p>
+              <h3 class="rv-title" id="rv-title"></h3>
+            </div>
+            <div class="fo-modes" role="group" aria-label="Pilih minggu">
+              <button class="fo-chip" type="button" data-action="rv-week" data-wk="last" aria-pressed="false">Minggu lalu</button>
+              <button class="fo-chip" type="button" data-action="rv-week" data-wk="this" aria-pressed="true">Minggu ini</button>
+            </div>
+          </div>
+          <p class="rv-nudge" id="rv-nudge" hidden></p>
+          <dl class="log-stats rv-stats" id="rv-stats"></dl>
+          <div class="rv-grid">
+            <div class="rv-notes" id="rv-notes"></div>
+            <form class="rv-form" id="rv-form" novalidate>
+              <label class="field"><span>Yang berhasil</span><textarea class="textarea" data-rv="win" rows="3" maxlength="500" placeholder="Misal: 4 pomodoro hari Sabtu, NumPy mulai lancar"></textarea></label>
+              <label class="field"><span>Yang macet</span><textarea class="textarea" data-rv="stuck" rows="3" maxlength="500" placeholder="Misal: broadcasting masih bingung, tidur kemalaman"></textarea></label>
+              <label class="field"><span>Fokus minggu depan</span><textarea class="textarea" data-rv="next" rows="3" maxlength="500" placeholder="Satu sampai tiga hal yang bisa dicek"></textarea></label>
+              <p class="mono muted rv-saved" id="rv-saved" aria-live="polite"></p>
+            </form>
+          </div>
+          <div class="rv-actions">
+            <button class="btn btn-lime" id="rv-copy" type="button" data-action="copy-review" data-magnetic>Salin prompt review <span class="arr" aria-hidden="true">→</span></button>
+            <p class="status" id="rv-status" aria-live="polite"></p>
+          </div>
+          <div class="fallback" id="rv-fallback" hidden>
+            <label class="field"><span>Prompt review (salin manual)</span><textarea class="textarea" rows="9" readonly></textarea></label>
           </div>
         </div>
       </div>
@@ -438,29 +476,40 @@
                   </div>
                 </form>
               </div>
-              <p class="muted acct-unset" id="acct-unset" hidden>Login akun belum diaktifkan di situs ini. Pemilik situs perlu mengisi <code>js/firebase-config.js</code> (lihat README, bagian Akun). Sementara itu, sinkron bisa lewat GitHub Gist di bawah.</p>
-              <details class="gist-alt" id="gist-alt">
-                <summary class="mono">Tanpa akun: sinkron lewat GitHub Gist</summary>
-                <div class="gist-body">
-                  <ol class="sync-steps">
-                    <li><a id="sync-token-link" href="https://github.com/settings/tokens/new?scopes=gist&amp;description=AI%20Dev%20Tracker" target="_blank" rel="noopener noreferrer">Buat token GitHub <span aria-hidden="true">↗</span><span class="sr-only"> (tab baru)</span></a>. Centang <strong>gist</strong> saja, pilih masa berlaku, klik <strong>Generate token</strong>, lalu salin.</li>
-                    <li>Tempel di bawah, klik <strong>Hubungkan</strong>.</li>
-                    <li>Di perangkat lain, buka situs ini dan tempel token yang sama.</li>
-                  </ol>
-                  <form class="sync-form" id="sync-form" novalidate autocomplete="off">
-                    <label class="field"><span>Token GitHub</span><input class="input" id="sync-token" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="ghp_…"></label>
-                    <button class="btn btn-ghost" type="submit">Hubungkan <span class="arr" aria-hidden="true">→</span></button>
-                  </form>
-                  <p class="mono muted sync-note">Token hanya tersimpan di browser perangkat ini dan hanya bisa membaca/menulis gist. Simpan di password manager supaya mudah dipakai lagi.</p>
-                </div>
-              </details>
+              <p class="muted acct-unset" id="acct-unset" hidden>Login akun belum diaktifkan di situs ini. Pemilik situs perlu mengisi <code>js/firebase-config.js</code> (lihat README, bagian Akun). Sampai saat itu progres hanya tersimpan di browser ini.</p>
+              <p class="muted acct-legacy" id="acct-legacy" hidden>Sinkron lewat GitHub Gist sudah dihapus dan tokennya dilupakan di perangkat ini. Progresmu tetap ada di sini; masuk ke akun supaya tersinkron lagi. Gist lamanya bisa kamu hapus sendiri di gist.github.com.</p>
             </div>
             <div id="sync-on" hidden>
               <p class="acct-who" id="sync-who"></p>
               <p>Setiap perubahan dikirim otomatis. Perubahan dari perangkat lain langsung dimuat.</p>
               <div class="data-actions">
                 <button class="btn" type="button" data-action="sync-now">Sinkron sekarang</button>
-                <button class="btn btn-ghost" type="button" data-action="sync-off" id="sync-off-btn">Keluar</button>
+                <button class="btn btn-ghost" type="button" data-action="sync-off">Keluar dari akun</button>
+              </div>
+
+              <div class="acct-share">
+                <div class="acct-share-head">
+                  <div>
+                    <p class="acct-share-title" id="share-title">Bagikan progres</p>
+                    <p class="muted acct-share-desc" id="share-desc">Link baca-saja yang selalu memakai data terbaru: checklist, kebiasaan, log, dan proyek. Refleksi mingguan tidak ikut.</p>
+                  </div>
+                  <button class="switch" id="share-toggle" type="button" role="switch" aria-checked="false" aria-labelledby="share-title" aria-describedby="share-desc" data-action="share-toggle"><span aria-hidden="true"></span></button>
+                </div>
+                <div class="share-link" id="share-link" hidden>
+                  <label class="field"><span>Link untuk dibagikan</span><input class="input" id="share-url" type="text" readonly></label>
+                  <button class="btn btn-sm" type="button" data-action="share-copy">Salin link</button>
+                </div>
+              </div>
+
+              <button class="link-btn acct-del-ask" id="acct-del-ask" type="button" data-action="acct-del-ask">Hapus akun…</button>
+              <div class="confirm" id="acct-del" role="group" aria-labelledby="acct-del-text" hidden>
+                <p id="acct-del-text"><strong>Hapus akun dan semua datanya di cloud?</strong> Progres di akun dan link bagikan dihapus permanen dan tidak bisa dikembalikan. Data di browser ini tetap ada; ekspor dulu kalau perlu. Keluar dulu dari akun di perangkat lain.</p>
+                <label class="field" id="acct-del-pass-field"><span>Kata sandi (konfirmasi)</span><input class="input" id="acct-del-pass" type="password" autocomplete="current-password"></label>
+                <p class="muted" id="acct-del-google" hidden>Jendela Google akan terbuka untuk konfirmasi.</p>
+                <div class="confirm-actions">
+                  <button class="btn btn-danger-solid btn-sm" type="button" data-action="acct-del">Ya, hapus akun</button>
+                  <button class="btn btn-ghost btn-sm" type="button" data-action="acct-del-cancel">Batal</button>
+                </div>
               </div>
             </div>
             <p class="status" id="sync-status" aria-live="polite"></p>

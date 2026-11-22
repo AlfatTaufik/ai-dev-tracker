@@ -15,6 +15,8 @@ export function empty() {
     projects: Object.fromEntries(P.map((p) => [p.id, emptyProject()])),
     log: [],
     habits: defaultHabits(),
+    links: {},   // own learning links per task: { taskId: [{u, t}] }
+    reviews: {}, // weekly reflections: { 'YYYY-MM-DD' (Monday): {win, stuck, next} }
     updated: '',
   };
 }
@@ -24,6 +26,8 @@ export function defaultHabits() {
 }
 
 const YMD = /^\d{4}-\d{2}-\d{2}$/;
+export const LINK_MAX = 8;
+export const REVIEW_FIELDS = ['win', 'stuck', 'next'];
 
 const str = (v, max) => (typeof v === 'string' ? v.slice(0, max) : '');
 
@@ -36,7 +40,7 @@ export function norm(raw) {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) {
     throw new Error('Isi file bukan data AI Dev Tracker.');
   }
-  const known = ['done', 'custom', 'projects', 'log', 'habits', 'updated'];
+  const known = ['done', 'custom', 'projects', 'log', 'habits', 'links', 'reviews', 'updated'];
   if (!known.some((k) => k in raw)) throw new Error('Isi file bukan data AI Dev Tracker.');
 
   const out = empty();
@@ -105,6 +109,31 @@ export function norm(raw) {
     }
   }
 
+  if (raw.links && typeof raw.links === 'object' && !Array.isArray(raw.links)) {
+    for (const [id, list] of Object.entries(raw.links)) {
+      if (!ids.has(id) || !Array.isArray(list)) continue;
+      const seen = new Set();
+      const clean = [];
+      for (const l of list) {
+        const u = str(l?.u, 300).trim();
+        if (!/^https?:\/\/[^\s]+$/i.test(u) || seen.has(u) || clean.length >= LINK_MAX) continue;
+        seen.add(u);
+        clean.push({ u, t: str(l.t, 80).trim() });
+      }
+      if (clean.length) out.links[id] = clean;
+    }
+  }
+
+  if (raw.reviews && typeof raw.reviews === 'object' && !Array.isArray(raw.reviews)) {
+    for (const wk of Object.keys(raw.reviews).filter((k) => YMD.test(k)).sort().slice(-104)) {
+      const r = raw.reviews[wk];
+      if (!r || typeof r !== 'object') continue;
+      const clean = {};
+      for (const f of REVIEW_FIELDS) { const v = str(r[f], 500); if (v.trim()) clean[f] = v; }
+      if (Object.keys(clean).length) out.reviews[wk] = clean;
+    }
+  }
+
   if (typeof raw.updated === 'string' && !Number.isNaN(Date.parse(raw.updated))) out.updated = raw.updated;
   return out;
 }
@@ -113,7 +142,7 @@ export function norm(raw) {
 export const store = {
   data: empty(),
   readOnly: false,
-  /** 'local' | 'file' | 'empty' */
+  /** 'local' | 'file' | 'share' | 'empty' */
   source: 'empty',
 };
 
@@ -138,7 +167,7 @@ export function loadLocal() {
 /** True when data holds any progress at all. */
 export function hasProgress(d) {
   return Object.keys(d.done).length > 0 || d.custom.length > 0 || d.log.length > 0
-    || d.habits.some((h) => h.days.length)
+    || d.habits.some((h) => h.days.length) || Object.keys(d.links).length > 0 || Object.keys(d.reviews).length > 0
     || Object.values(d.projects).some((p) => p.status || p.github || p.demo || p.notes || p.desc);
 }
 
@@ -239,7 +268,7 @@ export function clearAll() {
 /** Keep several open tabs in sync. */
 export function watchOtherTabs() {
   window.addEventListener('storage', (e) => {
-    if (e.key !== KEY) return;
+    if (e.key !== KEY || store.source === 'share') return; // a shared view never shows this browser's data
     if (e.newValue === null) { store.data = empty(); store.source = 'empty'; emit({ reset: true }); return; }
     try {
       store.data = norm(JSON.parse(e.newValue));

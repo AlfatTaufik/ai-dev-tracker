@@ -2,17 +2,17 @@
 import { M, MASCOT_SRC, TICKER, HABIT_MAX, HABIT_AI_MIN } from './data.js';
 import {
   store, subscribe, loadLocal, loadRepoFile, update, editHere,
-  exportJSON, importFile, clearAll, watchOtherTabs,
+  exportJSON, importFile, clearAll, watchOtherTabs, LINK_MAX,
 } from './store.js';
-import { renderAll, ui, updateLinkHint, onRender } from './render.js';
+import { renderAll, ui, updateLinkHint, onRender, reviewStart } from './render.js';
 import { initNetwork } from './network.js';
 import { initHero } from './hero.js';
 import { initMotion, scrollToEl, refresh, stopScroll, startScroll } from './motion.js';
-import { coachPrompt, descPrompt, copyText } from './prompts.js';
-import { startSync, onSync, connect, disconnect, syncNow, signIn, resetPassword, accountsEnabled } from './sync.js';
-import { preload as preloadAccount } from './account.js';
+import { coachPrompt, descPrompt, reviewPrompt, copyText } from './prompts.js';
+import { startSync, onSync, disconnect, syncNow, signIn, resetPassword, accountsEnabled, deleteAccount, setShare, shareUrl, sync } from './sync.js';
+import { preload as preloadAccount, readShare } from './account.js';
 import { initFocus } from './focus.js';
-import { activeMonth, monthProgress, todayStr, habitActive, habitsToday } from './util.js';
+import { activeMonth, monthProgress, todayStr, habitActive, habitsToday, safeUrl } from './util.js';
 
 const $ = (id) => document.getElementById(id);
 const reduced = () => matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -247,6 +247,34 @@ function setupEvents() {
         if (ok) { $('coach-copy').focus({ preventScroll: true }); toast('✦ Prompt AI coach tersalin'); }
         break;
       }
+      case 'rv-week':
+        ui.rvWeek = el.dataset.wk;
+        $('rv-status').textContent = '';
+        $('rv-fallback').hidden = true;
+        renderAll();
+        break;
+      case 'copy-review': {
+        const ok = await copyText(reviewPrompt(store.data, reviewStart()), { status: $('rv-status'), fallback: $('rv-fallback') });
+        if (ok) toast('✦ Prompt review tersalin');
+        break;
+      }
+      case 'res-toggle': {
+        const id = el.dataset.id;
+        if (ui.resOpen.has(id)) ui.resOpen.delete(id); else ui.resOpen.add(id);
+        renderAll();
+        refresh();
+        break;
+      }
+      case 'del-link': {
+        const { id, u } = el.dataset;
+        update((d) => {
+          d.links[id] = (d.links[id] ?? []).filter((l) => l.u !== u);
+          if (!d.links[id].length) delete d.links[id];
+        });
+        $(`res-u-${id}`)?.focus({ preventScroll: true });
+        toast('Link dihapus');
+        break;
+      }
       case 'copy-coach': {
         const ok = await copyText(coachPrompt(store.data), { status: $('coach-status'), fallback: $('coach-fallback') });
         if (ok) toast('✦ Prompt AI coach tersalin');
@@ -281,13 +309,51 @@ function setupEvents() {
         break;
       case 'install': install(); break;
       case 'sync-now': syncNow(); break;
-      case 'sync-off': {
-        const wasAccount = connectedKind === 'account';
+      case 'sync-off':
         await disconnect();
-        syncMsg(wasAccount
-          ? 'Kamu sudah keluar. Progres tetap ada di browser ini dan di akunmu. Kalau ini bukan perangkatmu, hapus juga datanya lewat “Hapus semua data”.'
-          : 'Sinkron diputus di perangkat ini. Data tetap ada di sini dan di gist.');
-        (accountsEnabled ? $('acct-email') : $('sync-token')).focus();
+        syncMsg('Kamu sudah keluar. Progres tetap ada di browser ini dan di akunmu. Kalau ini bukan perangkatmu, hapus juga datanya lewat “Hapus semua data”.');
+        $('acct-email').focus();
+        break;
+      case 'share-toggle': {
+        const on = el.getAttribute('aria-checked') !== 'true';
+        el.disabled = true;
+        try {
+          await setShare(on);
+          syncMsg(on ? 'Progres dibagikan. Siapa pun yang punya link bisa melihatnya (baca saja).' : 'Berhenti dibagikan. Link lama tidak bisa dibuka lagi.');
+        } catch (err) {
+          syncMsg(err.message === 'offline' ? 'Tidak ada internet. Coba lagi saat online.' : err.message, true);
+        } finally { el.disabled = false; }
+        break;
+      }
+      case 'share-copy': {
+        const ok = await copyText(shareUrl(), { status: null, fallback: null });
+        if (ok) toast('✦ Link tersalin'); else { $('share-url').focus(); $('share-url').select(); }
+        break;
+      }
+      case 'acct-del-ask':
+        $('acct-del').hidden = false;
+        el.hidden = true;
+        (sync.provider === 'password' ? $('acct-del-pass') : $('acct-del').querySelector('[data-action="acct-del-cancel"]')).focus();
+        break;
+      case 'acct-del-cancel':
+        $('acct-del').hidden = true;
+        $('acct-del-ask').hidden = false;
+        $('acct-del-pass').value = '';
+        $('acct-del-ask').focus();
+        break;
+      case 'acct-del': {
+        el.disabled = true;
+        try {
+          await deleteAccount($('acct-del-pass').value);
+          $('acct-del').hidden = true;
+          $('acct-del-ask').hidden = false;
+          $('acct-del-pass').value = '';
+          syncMsg('Akun dan data di cloud sudah dihapus. Progres di browser ini masih ada.');
+          toast('Akun dihapus');
+          $('acct-email').focus();
+        } catch (err) {
+          syncMsg(err.message === 'offline' ? 'Tidak ada internet. Coba lagi saat online.' : err.message, true);
+        } finally { el.disabled = false; }
         break;
       }
       case 'acct-google': accountSignIn('google', el); break;
@@ -355,6 +421,43 @@ function setupEvents() {
 
   $('hb-rows').addEventListener('keydown', habitKeys);
 
+  // Own learning links per task
+  $('tasks').addEventListener('submit', (e) => {
+    const form = e.target.closest('.res-form');
+    if (!form) return;
+    e.preventDefault();
+    const id = form.dataset.id;
+    const input = form.elements.u;
+    const u = safeUrl(input.value);
+    const list = store.data.links[id] ?? [];
+    if (!u) { toast('Link harus diawali http:// atau https://'); input.focus(); return; }
+    if (list.some((l) => l.u === u)) { toast('Link itu sudah ada'); input.focus(); return; }
+    if (list.length >= LINK_MAX) { toast(`Maksimal ${LINK_MAX} link per tugas`); return; }
+    update((d) => { (d.links[id] ??= []).push({ u: u.slice(0, 300), t: '' }); });
+    $(`res-u-${id}`)?.focus({ preventScroll: true });
+    toast('Link disimpan');
+  });
+
+  // Weekly review: saved while typing (short pause), one entry per week.
+  let rvTimer = 0;
+  $('rv-form').addEventListener('input', (e) => {
+    const t = e.target.closest('textarea[data-rv]');
+    if (!t) return;
+    const wk = $('rv-form').dataset.week;
+    $('rv-saved').textContent = 'Mengetik…';
+    clearTimeout(rvTimer);
+    rvTimer = setTimeout(() => {
+      update((d) => {
+        const r = (d.reviews[wk] ??= {});
+        $('rv-form').querySelectorAll('textarea[data-rv]').forEach((x) => {
+          if (x.value.trim()) r[x.dataset.rv] = x.value.slice(0, 500); else delete r[x.dataset.rv];
+        });
+        if (!Object.keys(r).length) delete d.reviews[wk];
+      });
+      $('rv-saved').textContent = 'Tersimpan';
+    }, 500);
+  });
+
   $('hb-form').addEventListener('submit', (e) => {
     e.preventDefault();
     const input = $('hb-new');
@@ -400,7 +503,6 @@ function setupEvents() {
 }
 
 // ---------- Account + sync between devices ----------
-let connectedKind = '';
 /** auto: the message only describes the sync state, and is cleared when that state passes. */
 function syncMsg(msg, isError = false, auto = false) {
   const el = $('sync-status');
@@ -410,16 +512,14 @@ function syncMsg(msg, isError = false, auto = false) {
 }
 
 function renderSync(s) {
-  const card = $('akun');
-  connectedKind = s.state === 'off' ? '' : s.kind;
-  card.dataset.state = s.state;
-  const isAccount = s.kind === 'account';
-  // On error the forms stay, so you can sign in again or paste a new token.
-  $('sync-off').hidden = s.state !== 'off' && s.state !== 'error';
-  $('sync-on').hidden = s.state === 'off';
+  const on = s.state !== 'off';
+  $('akun').dataset.state = s.state;
+  // On error the login form stays, so you can sign in again.
+  $('sync-off').hidden = on && s.state !== 'error';
+  $('sync-on').hidden = !on;
   const hm = (iso) => { const d = new Date(iso); return `${String(d.getHours()).padStart(2, '0')}.${String(d.getMinutes()).padStart(2, '0')}`; };
   $('sync-state-text').textContent = {
-    off: accountsEnabled ? 'Belum masuk' : 'Belum terhubung',
+    off: 'Belum masuk',
     idle: s.last ? `Tersinkron · ${hm(s.last)}` : 'Tersinkron',
     busy: s.msg || 'Menyinkronkan…',
     offline: 'Offline · menunggu internet',
@@ -427,16 +527,22 @@ function renderSync(s) {
   }[s.state];
   const who = $('sync-who');
   who.textContent = '';
-  if (isAccount) who.append('Masuk sebagai ', Object.assign(document.createElement('strong'), { textContent: s.email || 'akun Google' }), '.');
-  else who.textContent = 'Tersambung ke GitHub Gist.';
-  $('sync-off-btn').textContent = isAccount ? 'Keluar dari akun' : 'Putuskan di perangkat ini';
+  who.append('Masuk sebagai ', Object.assign(document.createElement('strong'), { textContent: s.email || 'akun Google' }), '.');
   if (s.state === 'error' || s.state === 'offline') syncMsg(s.msg, s.state === 'error', true);
   else if ($('sync-status').dataset.auto && s.state === 'idle') syncMsg('');
-  $('confirm-sync').hidden = s.state === 'off';
+  $('confirm-sync').hidden = !on;
+  $('acct-legacy').hidden = !s.legacyGist || on;
 
-  const nav = $('nav-acct');
-  nav.classList.toggle('is-on', isAccount && s.state !== 'off');
-  $('nav-acct-text').textContent = isAccount && s.state !== 'off' ? 'Akun' : accountsEnabled ? 'Masuk' : 'Akun';
+  const share = $('share-toggle');
+  share.setAttribute('aria-checked', String(!!s.share));
+  share.disabled = s.share === null;
+  $('share-link').hidden = !s.share;
+  $('share-url').value = s.share ? shareUrl() : '';
+  $('acct-del-pass-field').hidden = s.provider !== 'password';
+  $('acct-del-google').hidden = s.provider === 'password';
+
+  $('nav-acct').classList.toggle('is-on', on);
+  $('nav-acct-text').textContent = on ? 'Akun' : accountsEnabled ? 'Masuk' : 'Akun';
 }
 
 let signingIn = false;
@@ -477,24 +583,7 @@ function setupSync() {
     });
   } else {
     $('acct-unset').hidden = false;
-    $('gist-alt').open = true;
   }
-  $('sync-form').addEventListener('submit', async (e) => {
-    e.preventDefault();
-    const input = $('sync-token');
-    try {
-      const { created } = await connect(input.value);
-      input.value = '';
-      syncMsg(created
-        ? 'Terhubung. Gist baru dibuat dari progres di perangkat ini. Sekarang tempel token yang sama di perangkat lain.'
-        : 'Terhubung ke gist yang sudah ada. Progres dari perangkat lain sudah digabung ke sini.');
-      toast('✦ Sinkron aktif');
-      refresh();
-    } catch (err) {
-      syncMsg(err.message === 'offline' ? 'Tidak ada internet. Coba lagi saat online.' : err.message, true);
-      input.focus();
-    }
-  });
 }
 
 // ---------- Install (PWA) ----------
@@ -548,7 +637,20 @@ async function init() {
   subscribe(renderAll);
   subscribe((info) => { if (info.pulled) toast('↓ Progres dari perangkat lain dimuat'); });
 
-  if (!loadLocal()) await loadRepoFile();
+  // ?lihat=<id>: someone's shared progress, read only. Nothing is saved in this browser.
+  const shareId = new URLSearchParams(location.search).get('lihat');
+  let shared = false;
+  if (shareId && accountsEnabled) {
+    try {
+      store.data = await readShare(shareId);
+      store.readOnly = true;
+      store.source = 'share';
+      shared = true;
+    } catch (err) {
+      setTimeout(() => toast(err.message), 1200);
+    }
+  }
+  if (!shared && !loadLocal()) await loadRepoFile();
   renderAll({ reset: true });
   setupEvents();
   initFocus({ onLog: logSession, onTaskDone: (id) => { if (!store.data.done[id]) toggle(id); }, toast });

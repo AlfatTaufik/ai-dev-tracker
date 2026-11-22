@@ -22,11 +22,13 @@ export function flatten(d) {
     f.set(`habit:${h.id}`, JSON.stringify([h.name, h.goal, h.end]));
     for (const day of h.days) f.set(`hday:${h.id}:${day}`, '1');
   }
+  for (const [id, list] of Object.entries(d.links)) for (const l of list) f.set(`link:${id}:${l.u}`, l.t);
+  for (const [wk, r] of Object.entries(d.reviews)) for (const [k, v] of Object.entries(r)) f.set(`review:${wk}:${k}`, v);
   return f;
 }
 
 function unflatten(f, order) {
-  const out = { done: {}, custom: [], projects: {}, log: [], habits: [] };
+  const out = { done: {}, custom: [], projects: {}, log: [], habits: [], links: {}, reviews: {} };
   const habits = new Map();
   const days = [];
   for (const [k, v] of f) {
@@ -39,6 +41,8 @@ function unflatten(f, order) {
     else if (type === 'log') { const [d, m, ...n] = rest.slice(0, rest.lastIndexOf('#')).split('|'); out.log.push({ d, m: Number(m), n: n.join('|') }); }
     else if (type === 'habit') { const [name, goal, end] = JSON.parse(v); habits.set(rest, { id: rest, name, goal, end, days: [] }); }
     else if (type === 'hday') { const j = rest.lastIndexOf(':'); days.push([rest.slice(0, j), rest.slice(j + 1)]); }
+    else if (type === 'link') { const j = rest.indexOf(':'); (out.links[rest.slice(0, j)] ??= []).push({ u: rest.slice(j + 1), t: v }); }
+    else if (type === 'review') { const j = rest.indexOf(':'); (out.reviews[rest.slice(0, j)] ??= {})[rest.slice(j + 1)] = v; }
   }
   for (const [id, day] of days) habits.get(id)?.days.push(day); // days of a deleted habit are dropped
   for (const h of habits.values()) h.days.sort();

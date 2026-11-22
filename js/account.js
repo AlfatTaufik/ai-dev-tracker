@@ -1,5 +1,6 @@
 // Accounts: Firebase Auth (Google or email + password) and one Firestore document per user
 // at trackers/{uid} = { json: "<tracker data>", updated: <server time> }.
+// Sharing (optional) keeps a read-only copy at shares/{uid}, readable by anyone with the link.
 // The Firebase SDK (pinned version, from Google's CDN) is only downloaded when accounts
 // are configured and someone signs in, so the site stays light for everyone else.
 import { FIREBASE_CONFIG } from './firebase-config.js';
@@ -53,6 +54,8 @@ const AUTH_MSG = {
   'auth/user-disabled': 'Akun ini dinonaktifkan.',
   'auth/unauthorized-domain': 'Domain ini belum diizinkan di Firebase (Authentication → Settings → Authorized domains).',
   'auth/operation-not-allowed': 'Cara masuk ini belum diaktifkan di Firebase (Authentication → Sign-in method).',
+  'auth/requires-recent-login': 'Demi keamanan, keluar lalu masuk lagi, kemudian coba hapus akun.',
+  'auth/user-mismatch': 'Akun Google yang dipilih berbeda dengan akun yang sedang masuk.',
 };
 const authError = (err) => (err instanceof SyncError ? err
   : new SyncError(AUTH_MSG[err?.code] ?? `Gagal masuk (${err?.code || 'tidak diketahui'}). Coba lagi.`));
@@ -105,6 +108,45 @@ function fsError(err) {
   return new SyncError(FS_MSG[err?.code] ?? `Sinkron akun gagal (${err?.code || 'tidak diketahui'}). Coba lagi nanti.`);
 }
 
+/** 'password' for email accounts, else the provider id (e.g. 'google.com'). */
+export const providerOf = (user) => (user?.providerData?.some((p) => p.providerId === 'password') ? 'password' : user?.providerData?.[0]?.providerId || 'google.com');
+
+/** Read someone's shared progress (no login needed). */
+export async function readShare(uid) {
+  if (!/^[\w-]{1,128}$/.test(uid)) throw new SyncError('Link bagikan tidak valid.');
+  const { db, F } = await load().catch(() => { throw new SyncError('Tidak bisa memuat progres yang dibagikan. Periksa internet.'); });
+  let snap;
+  try { snap = await within(F.getDoc(F.doc(db, 'shares', uid)), 15_000); } catch (err) { throw fsError(err); }
+  if (!snap.exists()) throw new SyncError('Progres ini sudah tidak dibagikan.');
+  return norm(JSON.parse(snap.data().json));
+}
+
+/**
+ * Delete the signed-in account: confirm identity again (password, or the Google popup),
+ * remove the cloud copy and the shared copy, then the login itself.
+ */
+export async function deleteAccount(uid, password = '') {
+  const { auth, db, A, F } = await load();
+  const user = auth.currentUser;
+  if (!user || user.uid !== uid) throw new SyncError('Sesi akun berakhir. Masuk lagi dulu.');
+  try {
+    if (providerOf(user) === 'password') {
+      if (!password) throw new SyncError('Tulis kata sandimu untuk konfirmasi.');
+      await A.reauthenticateWithCredential(user, A.EmailAuthProvider.credential(user.email, password));
+    } else {
+      await A.reauthenticateWithPopup(user, new A.GoogleAuthProvider());
+    }
+  } catch (err) {
+    if (['auth/invalid-credential', 'auth/wrong-password', 'auth/invalid-login-credentials'].includes(err?.code)) throw new SyncError('Kata sandi salah.');
+    throw authError(err);
+  }
+  try {
+    await F.deleteDoc(F.doc(db, 'shares', uid));
+    await F.deleteDoc(F.doc(db, 'trackers', uid));
+  } catch (err) { throw fsError(err); }
+  try { await A.deleteUser(user); } catch (err) { throw authError(err); }
+}
+
 /** Timeout so an offline transaction fails fast instead of retrying for a long time. */
 const within = (p, ms) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(new SyncError(OFFLINE)), ms))]);
 
@@ -114,7 +156,13 @@ export async function remoteFor(uid) {
   await auth.authStateReady();
   if (auth.currentUser?.uid !== uid) throw new SyncError('Sesi akun berakhir. Masuk lagi untuk melanjutkan sinkron.');
   const ref = F.doc(db, 'trackers', uid);
+  const shareRef = F.doc(db, 'shares', uid);
+  const guard = async (p) => { try { return await within(p, 20_000); } catch (err) { throw fsError(err); } };
   return {
+    provider: providerOf(auth.currentUser),
+    async isShared() { return (await guard(F.getDoc(shareRef))).exists(); },
+    share: (data) => guard(F.setDoc(shareRef, { json: JSON.stringify(data), updated: F.serverTimestamp() })),
+    unshare: () => guard(F.deleteDoc(shareRef)),
     async transact(fn) {
       if (navigator.onLine === false) throw new SyncError(OFFLINE);
       try {

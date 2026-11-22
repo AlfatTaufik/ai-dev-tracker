@@ -3,6 +3,7 @@ import { M, P, ST, WEEK_TARGET, EXAM_END } from './data.js';
 import {
   activeMonth, monthProgress, totals, thisWeekMinutes, weeks, overdue,
   fmtHours, fmtLong, todayStr, habitActive, habitWeekCount, habitStreak, habitConsistency, lastDays,
+  focusStats, weekOf, weekSummary,
 } from './util.js';
 
 export function coachPrompt(data) {
@@ -27,6 +28,8 @@ export function coachPrompt(data) {
     `- Jam belajar minggu ini: ${fmtHours(thisWeekMinutes(data))} dari target ${WEEK_TARGET} jam`,
     `- Rata-rata 4 minggu terakhir: ${fmtHours(last4)} jam per minggu`,
     `- Proyek: ${P.map((p) => `${p.title} (${ST[data.projects[p.id]?.status ?? '']})`).join(', ')}`,
+    ...focusLine(data),
+    ...promiseLine(data, today),
     ...(today <= EXAM_END ? [`- Saya masih ujian sampai ${fmtLong(EXAM_END)}. Jangan bebani berlebihan sebelum tanggal itu.`] : []),
     '',
     'TUGAS BULAN INI',
@@ -59,6 +62,50 @@ export function coachPrompt(data) {
     '3. Satu sumber belajar gratis terbaik untuk tugas berikutnya (dokumentasi resmi atau kursus gratis).',
     '4. Satu pertanyaan untuk mengecek pemahaman saya tentang materi terakhir di log.',
     '5. Kebiasaan mana yang paling sering bolong, dan satu trik kecil supaya lebih konsisten.',
+  );
+  return lines.join('\n');
+}
+
+function focusLine(data) {
+  const f = focusStats(data, 7);
+  if (!f.sessions) return [];
+  return [`- Pomodoro 7 hari terakhir: ${f.sessions} sesi, ${fmtHours(f.total)} jam, rata-rata ${f.avg} menit per sesi${f.top ? `; paling banyak untuk "${f.top[0]}"` : ''}`];
+}
+/** What last week's review said this week should focus on. */
+function promiseLine(data, today) {
+  const p = weekSummary(data, weekOf(today), today).promise.trim();
+  return p ? [`- Fokus yang saya tetapkan untuk minggu ini (dari review minggu lalu): ${p}`] : [];
+}
+
+/** Prompt for the weekly review of the week starting at `start` (Monday). */
+export function reviewPrompt(data, start) {
+  const w = weekSummary(data, start);
+  const r = w.review;
+  const lines = [
+    'Kamu adalah AI coach untuk mahasiswa yang menjalani roadmap 6 bulan menjadi AI developer sambil kuliah.',
+    'Ini review mingguan saya. Jawab dalam bahasa Indonesia, singkat, jujur, dan realistis untuk jadwal mahasiswa.',
+    '',
+    `MINGGU ${fmtLong(w.start)} – ${fmtLong(w.end)}`,
+    `- Jam belajar: ${fmtHours(w.minutes)} dari target ${WEEK_TARGET} jam${w.hit ? ' (tercapai)' : ''}`,
+    `- Hari aktif belajar: ${w.activeDays} dari 7`,
+    `- Pomodoro: ${w.focusSessions} sesi, ${fmtHours(w.focusMin)} jam`,
+    w.best ? `- Hari terbaik: ${w.best.name}, ${w.best.min} menit` : '- Belum ada sesi belajar tercatat minggu ini',
+    `- Kebiasaan yang mencapai target: ${w.habitsMet} dari ${w.habits.length}`,
+    ...w.habits.map((x) => `  - ${x.h.name}: ${x.done}/${x.want}`),
+  ];
+  if (w.due.length) lines.push('', 'TENGGAT MINGGU INI', ...w.due.map((t) => `[${t.done ? 'x' : ' '}] ${t.t}`));
+  if (w.overdue.length) lines.push('', 'MASIH TERTINGGAL', ...w.overdue.map((t) => `[ ] ${t.t} (target ${fmtLong(t.d)})`));
+  if (w.promise) lines.push('', `JANJI MINGGU LALU: ${w.promise.trim()}`);
+  lines.push('', 'REFLEKSI SAYA',
+    `- Yang berhasil: ${r.win?.trim() || '(belum diisi)'}`,
+    `- Yang macet: ${r.stuck?.trim() || '(belum diisi)'}`,
+    `- Fokus minggu depan: ${r.next?.trim() || '(belum diisi)'}`,
+    '',
+    'YANG SAYA BUTUHKAN',
+    '1. Nilai minggu ini dalam satu kalimat, lalu satu hal yang perlu dipertahankan.',
+    '2. Penyebab paling mungkin dari yang macet, dan satu perubahan kecil untuk minggu depan.',
+    `3. Rencana 7 hari ke depan: maksimal ${WEEK_TARGET} jam, sesi 25 sampai 50 menit (pomodoro), sebut tugasnya. Dahulukan yang tertinggal.`,
+    '4. Kalau "fokus minggu depan" saya terlalu besar atau kabur, bantu pecah jadi 2 sampai 3 target yang bisa dicek.',
   );
   return lines.join('\n');
 }

@@ -3,9 +3,9 @@
 **Live:** https://alfattaufik.github.io/ai-dev-tracker/
 
 Tracker roadmap 6 bulan menuju AI developer, dari Python sampai LLM, sambil kuliah.
-Checklist per bulan, grafik jaringan progres, habit tracker harian, timer pomodoro yang
-langsung mencatat ke log, tiga proyek portofolio, log jam belajar, dan prompt AI coach yang
-tinggal disalin.
+Checklist per bulan dengan sumber belajar per tugas, grafik jaringan progres, habit tracker
+harian, timer pomodoro yang langsung mencatat ke log, review mingguan, tiga proyek portofolio,
+log jam belajar, dan prompt AI coach yang tinggal disalin.
 
 HTML, CSS, dan JavaScript biasa (ES modules), tanpa build step. Data disimpan di browser
 (localStorage). Login akun (Google atau email) opsional, supaya progres sama di semua perangkat.
@@ -39,8 +39,9 @@ kartu kredit): Firebase Auth untuk login, Firestore untuk menyimpan satu dokumen
 
 ### Menyalakan login akun (sekali saja, oleh pemilik situs)
 
-Selama `js/firebase-config.js` berisi `null`, tombol login tidak muncul dan situs memakai
-sinkron GitHub Gist (di bawah).
+Situs ini sudah tersambung ke proyek Firebase `ai-dev-track`. Untuk fork atau proyek baru,
+ikuti langkah di bawah. Selama `js/firebase-config.js` berisi `null`, tombol login tidak muncul
+dan progres hanya tersimpan di browser.
 
 1. Buka https://console.firebase.google.com, klik **Create a project** (Google Analytics boleh dimatikan).
 2. **Build → Authentication → Get started → Sign-in method**: aktifkan **Google** dan
@@ -75,20 +76,27 @@ Nilai di `firebaseConfig` memang publik. Yang melindungi data adalah `firestore.
 - **Hapus semua data** saat masih masuk juga menghapus data di akun dan semua perangkat.
 - Pengaturan sinkron disimpan di localStorage `aidev-sync-v1` (terpisah dari data).
 
-### Tanpa akun: GitHub Gist
+### Bagikan progres (link baca-saja)
 
-Masih tersedia di kartu Akun, bagian **Tanpa akun: sinkron lewat GitHub Gist**. Hanya satu
-cara sinkron yang aktif dalam satu waktu.
+Di kartu Akun, nyalakan **Bagikan progres** lalu salin linknya
+(`…/ai-dev-tracker/?lihat=<id>`). Siapa pun yang punya link melihat checklist, kebiasaan,
+log, dan proyekmu dalam mode lihat, selalu dengan data terbaru. Refleksi mingguan tidak ikut.
+Salinannya ada di dokumen `shares/{uid}`, diperbarui setiap sinkron. Matikan saklarnya untuk
+menghapus salinan itu; link lama langsung tidak bisa dibuka.
 
-1. Buat token di https://github.com/settings/tokens/new?scopes=gist&description=AI%20Dev%20Tracker
-   (classic token). Centang **gist** saja, pilih masa berlaku, lalu **Generate token**.
-2. Tempel token itu lalu klik **Hubungkan**. Perangkat pertama membuat gist `aidev-tracker.json`.
-3. Di perangkat lain, tempel token yang sama. Gist yang sama ditemukan otomatis dan
-   progresnya digabung. Gist dicek setiap menit saat halaman terbuka.
+### Hapus akun
 
-Gist rahasia tidak muncul di profilmu, tapi siapa pun yang tahu URL-nya bisa membacanya.
-Token disimpan di localStorage perangkat itu saja, dan script dari CDN dikunci dengan hash SRI.
-Kalau token kedaluwarsa, status berubah merah. Buat token baru dan tempel lagi.
+**Hapus akun…** di kartu Akun meminta konfirmasi (kata sandi, atau jendela Google), lalu
+menghapus dokumen `trackers/{uid}` dan `shares/{uid}` serta akun loginnya. Data di browser
+yang sedang dipakai tetap ada. Keluar dulu dari akun di perangkat lain sebelum menghapus.
+
+### GitHub Gist (dihapus)
+
+Versi sebelumnya bisa sinkron lewat GitHub Gist. Cara itu sudah dihapus supaya hanya ada satu
+cara sinkron dan halaman tidak lagi menyimpan token GitHub. Perangkat yang dulu memakai Gist
+otomatis melupakan tokennya dan menampilkan pemberitahuan; progresnya tetap ada di browser.
+Masuk ke akun untuk sinkron lagi. Gist lamanya (`aidev-tracker.json`) bisa dihapus sendiri di
+gist.github.com, dan tokennya dicabut di github.com/settings/tokens.
 
 ## Fokus (pomodoro)
 
@@ -104,9 +112,32 @@ Section **Fokus** berisi timer berbentuk jam 60 menit:
 - Saat sesi selesai: bunyi pendek, getar di HP, notifikasi (kalau diizinkan di Pengaturan
   timer), dan judul tab menampilkan hitung mundur. Kalau kamu menggulir menjauh, pil kecil di
   kiri bawah tetap menunjukkan sisa waktu.
+- Di bawah timer ada grafik menit fokus 7 hari terakhir, rata-rata menit per sesi, dan tugas
+  yang paling banyak difokuskan. Ringkasan ini juga masuk ke prompt AI coach.
 - Timer tetap berjalan kalau halaman ditutup atau HP dikunci. Sesi yang selesai saat itu
   dicatat ketika kamu membuka halaman lagi. Status timer disimpan per perangkat
   (localStorage `aidev-focus-v1`). Lognya ikut tersinkron.
+
+## Review mingguan
+
+Di bagian bawah section **Log** ada kartu review untuk minggu ini atau minggu lalu (Senin–Minggu).
+Hari Minggu (dan Senin untuk minggu lalu) muncul pengingat kalau belum diisi.
+
+- Angka minggu itu: jam belajar dibanding target, sesi pomodoro, hari aktif, dan kebiasaan yang
+  mencapai target.
+- Catatan otomatis: janji dari review minggu lalu, hari terbaik, tenggat minggu itu, tugas yang
+  tertinggal, dan kebiasaan yang paling sering bolong.
+- Tiga kolom refleksi (yang berhasil, yang macet, fokus minggu depan) tersimpan otomatis dan ikut
+  tersinkron. "Fokus minggu depan" muncul lagi sebagai janji di review minggu berikutnya dan di
+  prompt AI coach.
+- **Salin prompt review** membuat prompt berisi semua itu, untuk dievaluasi dan dibuatkan rencana
+  7 hari oleh ChatGPT, Claude, atau Gemini.
+
+## Sumber belajar per tugas
+
+Setiap tugas roadmap punya tombol **Sumber** di checklist. Isinya link gratis pilihan
+(dokumentasi resmi, Kaggle Learn, kursus gratis) dari `js/resources.js`, ditambah link milikmu
+sendiri (maksimal 8 per tugas). Link sendiri tersimpan di data dan ikut tersinkron.
 
 ## Menjalankan di komputer
 
@@ -136,8 +167,9 @@ js/network.js         grafik jaringan SVG yang bisa diklik (Enter/Spasi, panah)
 js/prompts.js         prompt AI coach + deskripsi proyek, salin dengan textarea cadangan
 js/main.js            inisialisasi, event listener, tombol pasang PWA, UI akun dan sinkron
 js/focus.js           timer pomodoro (dial, siklus, pencatatan ke log, notifikasi)
-js/sync.js            mesin sinkron (tarik, gabung, kirim) untuk akun atau GitHub Gist
-js/account.js         login Firebase dan dokumen Firestore per pengguna
+js/sync.js            mesin sinkron akun (tarik, gabung, kirim) + salinan untuk link bagikan
+js/account.js         login Firebase, dokumen Firestore per pengguna, bagikan, hapus akun
+js/resources.js       sumber belajar pilihan per tugas
 js/firebase-config.js config Firebase (null = login mati)
 js/merge.js           penggabungan tiga arah untuk sinkron
 firestore.rules       aturan Firestore: tiap pengguna hanya bisa akses datanya sendiri
@@ -160,14 +192,16 @@ assets/icon.svg       ikon aplikasi; icon-192.png, icon-512.png, apple-touch-ico
     "projects": { "p1": { "status": "", "github": "", "demo": "", "notes": "", "desc": "" } },
     "log":      [{ "d": "YYYY-MM-DD", "m": 90, "n": "catatan" }],
     "habits":   [{ "id": "h-ai", "name": "Belajar AI 30 menit", "goal": 5, "end": "", "days": ["YYYY-MM-DD"] }],
+    "links":    { "<taskId>": [{ "u": "https://…", "t": "" }] },
+    "reviews":  { "YYYY-MM-DD (Senin)": { "win": "", "stuck": "", "next": "" } },
     "updated":  "ISO date"
   }
   ```
 
 - Semua data yang dibaca (localStorage, file impor, `progress.json`) lewat `norm()` di
   `js/store.js`. Id yang tidak dikenal dibuang, tipe dicek, dan panjang teks dibatasi.
-- `habits` ditambahkan belakangan. File lama tanpa `habits` tetap bisa diimpor dan mendapat
-  kebiasaan bawaan. `goal` = target hari per minggu (1–7), `end` = hari terakhir (opsional).
+- `habits`, `links`, dan `reviews` ditambahkan belakangan. File lama tanpa kolom itu tetap bisa
+  diimpor (kebiasaan bawaan, tanpa link dan review). `goal` = target hari per minggu (1–7), `end` = hari terakhir (opsional).
 - **Jangan ubah id bulan (`m0`…`m6`) atau id tugas (`m0-1`…) di `js/data.js`.** Progres
   disimpan berdasarkan id itu. Mengubah teks atau tanggal tugas aman.
 
@@ -209,7 +243,8 @@ File `.nojekyll` sudah ada, jadi GitHub Pages menyajikan file apa adanya.
 
 ## Mode lihat (pamerkan progres)
 
-Pengunjung yang belum punya data di browsernya akan melihat progresmu dalam mode baca,
+Cara termudah: **Bagikan progres** di kartu Akun (lihat di atas). Cara lama tanpa akun:
+pengunjung yang belum punya data di browsernya akan melihat progresmu dalam mode baca,
 selama `progress.json` di repo berisi progres:
 
 1. Di bagian **Data**, klik **Ekspor progress.json**.
