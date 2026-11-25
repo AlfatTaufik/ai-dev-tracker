@@ -319,12 +319,17 @@
               <button class="fo-chip" type="button" data-fo-mode="long" aria-pressed="false">Istirahat panjang</button>
             </div>
 
+            <div class="fo-length">
+              <div class="fo-presets" id="fo-presets" role="group" aria-label="Pilih durasi"></div>
+              <label class="fo-min-field"><span class="sr-only">Durasi dalam menit, </span><input class="input tnum" id="fo-min" type="number" inputmode="numeric" step="1" value="25"> <span class="mono muted">menit <span class="fo-min-hint">(<span id="fo-min-hint">5–240</span>)</span></span></label>
+            </div>
+
             <div class="fo-controls">
               <button class="btn btn-lime fo-toggle" id="fo-toggle" type="button" aria-pressed="false" data-magnetic><span class="fo-toggle-text">Mulai</span> <span class="arr" aria-hidden="true">→</span></button>
               <button class="btn btn-ghost btn-sm" id="fo-reset" type="button">Ulang</button>
               <button class="btn btn-ghost btn-sm" id="fo-skip" type="button">Selesai sekarang</button>
             </div>
-            <p class="nn-hint mono fo-hint">Putar kenop di lingkaran (atau panah) untuk mengatur menit · sesi fokus yang selesai masuk ke log</p>
+            <p class="nn-hint mono fo-hint">Putar kenop untuk mengatur menit, satu putaran = 1 jam · sesi fokus yang selesai masuk ke log</p>
 
             <label class="field fo-task-field"><span>Sedang dikerjakan · <span id="fo-task-month"></span></span>
               <select class="select" id="fo-task"><option value="">Belajar bebas</option></select></label>

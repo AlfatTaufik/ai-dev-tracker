@@ -100,11 +100,12 @@ gist.github.com, dan tokennya dicabut di github.com/settings/tokens.
 
 ## Fokus (pomodoro)
 
-Section **Fokus** berisi timer berbentuk jam 60 menit:
+Section **Fokus** berisi timer berbentuk jam, satu putaran = 60 menit:
 
-- Putar kenop di lingkaran (seret, atau fokus ke kenop lalu tekan panah, Shift+panah = 5
-  menit, Home/End) untuk mengatur durasi. Fokus 5–60 menit, istirahat 1–30, istirahat
-  panjang 5–45. Bawaannya 25/5/15, dan istirahat panjang datang setelah 4 sesi fokus.
+- Atur durasi dengan memutar kenop (seret, atau fokus ke kenop lalu tekan panah, Shift+panah =
+  5 menit, PageUp/PageDown = 15 menit, Home/End), tombol durasi cepat, atau kotak menit. Lewat
+  satu jam, putar terus melewati angka 0. Fokus 5–240 menit, istirahat 1–30, istirahat panjang
+  5–60. Bawaannya 25/5/15, dan istirahat panjang datang setelah 4 sesi fokus.
 - **Mulai / Jeda / Ulang**, dan **Selesai sekarang** (menit yang sudah berjalan tetap dicatat)
   atau **Lewati istirahat**.
 - Pilih tugas bulan ini di **Sedang dikerjakan**. Sesi fokus yang selesai masuk ke log

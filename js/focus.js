@@ -1,5 +1,7 @@
-// Pomodoro timer ("Fokus" section). A 60-minute dial like a kitchen timer:
-// drag the knob (or use arrow keys) to set the length, start, and the coloured wedge runs down.
+// Pomodoro timer ("Fokus" section). A dial like a kitchen timer, one turn = 60 minutes:
+// drag the knob (or use arrow keys, a preset, or the minutes box) to set the length, start, and
+// the coloured wedge runs down. Longer than an hour means winding past 12 again: the full hours
+// left show as a dim ring under the bright wedge.
 // Finished focus sessions go straight into the study log. Timer state is kept per device
 // (localStorage 'aidev-focus-v1'), so a reload or a closed tab doesn't lose a running session.
 import { store, subscribe } from './store.js';
@@ -9,18 +11,31 @@ import { FOCUS_TAG, DAYS_ID, DAYS_LONG } from './data.js';
 const KEY = 'aidev-focus-v1';
 const EVERY = 4; // focus sessions before a long break
 const MODES = {
-  focus: { label: 'Fokus', min: 5, max: 60, def: 25 },
-  short: { label: 'Istirahat', min: 1, max: 30, def: 5 },
-  long: { label: 'Istirahat panjang', min: 5, max: 45, def: 15 },
+  focus: { label: 'Fokus', min: 5, max: 240, def: 25, presets: [25, 50, 60, 90, 120, 180] },
+  short: { label: 'Istirahat', min: 1, max: 30, def: 5, presets: [5, 10, 15] },
+  long: { label: 'Istirahat panjang', min: 5, max: 60, def: 15, presets: [15, 20, 30, 45, 60] },
 };
 const MIN = 60_000;
+const TURN = 60 * MIN; // one full turn of the dial
 const R = 74; // ring radius in the 220×220 viewBox
 const C = 2 * Math.PI * R;
 
 const $ = (id) => document.getElementById(id);
 const pad = (n) => String(n).padStart(2, '0');
 const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
-const mmss = (ms) => { const s = Math.ceil(ms / 1000); return `${pad(Math.floor(s / 60))}:${pad(s % 60)}`; };
+/** 25:00, or 1:30:00 from one hour up. */
+const clock = (ms) => {
+  const s = Math.ceil(ms / 1000);
+  const h = Math.floor(s / 3600);
+  return `${h ? `${h}:` : ''}${pad(Math.floor((s % 3600) / 60))}:${pad(s % 60)}`;
+};
+/** "25 menit", "1 jam 30 menit" */
+const words = (min) => {
+  const h = Math.floor(min / 60), m = min % 60;
+  return [h ? `${h} jam` : '', m ? `${m} menit` : ''].filter(Boolean).join(' ');
+};
+/** Short label for the preset buttons: 25, 1 j, 1½ j */
+const short = (min) => (min < 60 ? `${min}` : `${Math.floor(min / 60)}${min % 60 === 30 ? '½' : ''} jam`);
 
 let st = load();
 let hooks = { onLog: () => false, onTaskDone: () => {}, toast: () => {} };
@@ -44,7 +59,7 @@ function load() {
       if (Number.isInteger(v)) s.mins[m] = clamp(v, MODES[m].min, MODES[m].max);
     }
     if (raw.mode in MODES) s.mode = raw.mode;
-    s.total = Number.isFinite(raw.total) && raw.total > 0 && raw.total <= 60 * MIN ? raw.total : s.mins[s.mode] * MIN;
+    s.total = Number.isFinite(raw.total) && raw.total > 0 && raw.total <= MODES[s.mode].max * MIN ? raw.total : s.mins[s.mode] * MIN;
     s.left = Number.isFinite(raw.left) ? clamp(raw.left, 0, s.total) : s.total;
     s.run = raw.run === true && Number.isFinite(raw.end);
     s.end = s.run ? raw.end : 0;
@@ -130,7 +145,7 @@ function finish({ natural, minutes, late = false }) {
     if (min >= 1) {
       const t = taskOf(st.task);
       const res = hooks.onLog(ymd(new Date(endedAt)), min, t ? `${FOCUS_TAG} · ${t.t}` : FOCUS_TAG);
-      if (res) msg = `+${min} menit fokus tercatat di log${res.tick ? ' · kebiasaan ✓' : ''}.`;
+      if (res) msg = `+${words(min)} fokus tercatat di log${res.tick ? ' · kebiasaan ✓' : ''}.`;
       else if (store.readOnly) msg = 'Mode lihat: sesi tidak dicatat.';
       st.cycle = Math.min(EVERY, st.cycle + 1);
     } else msg = 'Sesi dilewati, belum ada satu menit untuk dicatat.';
@@ -147,7 +162,7 @@ function finish({ natural, minutes, late = false }) {
   if (natural && !late && st.auto) { st.run = true; st.end = Date.now() + st.left; }
   save();
 
-  const next = `${MODES[st.mode].label} ${st.mins[st.mode]} menit${st.run ? ' dimulai' : ''}`;
+  const next = `${MODES[st.mode].label} ${words(st.mins[st.mode])}${st.run ? ' dimulai' : ''}`;
   if (late) msg = `Sesi ${MODES[was].label.toLowerCase()} selesai saat halaman tertutup. ${msg}`;
   setStatus(`${msg} Berikutnya: ${next}.`, was === 'focus' && st.task && taskOf(st.task) && !store.data.done[st.task]);
   if (natural && !late) {
@@ -227,6 +242,7 @@ function build() {
       <g class="fo-ticks">${ticks}</g>
       <g class="fo-nums">${nums}</g>
       <circle class="fo-track" cx="110" cy="110" r="${R}"/>
+      <circle class="fo-arc fo-full" id="fo-full" cx="110" cy="110" r="${R}"/>
       <circle class="fo-arc" id="fo-arc" cx="110" cy="110" r="${R}" stroke-dasharray="${C.toFixed(2)}" stroke-dashoffset="${C.toFixed(2)}" transform="rotate(-90 110 110)"/>
     </svg>`);
 }
@@ -234,8 +250,10 @@ function build() {
 /** Cheap per-tick update: time, wedge, knob, title. */
 function paint() {
   const left = remaining();
-  const text = mmss(left);
-  const frac = Math.min(1, left / (60 * MIN));
+  const text = clock(left);
+  const full = Math.max(0, Math.ceil(left / TURN) - 1); // whole hours under the current turn
+  const frac = (left - full * TURN) / TURN;
+  $('fo-dial').classList.toggle('has-full', full > 0);
   $('fo-arc').setAttribute('stroke-dashoffset', (C * (1 - frac)).toFixed(2));
   const a = frac * Math.PI * 2;
   const knob = $('fo-knob');
@@ -244,6 +262,7 @@ function paint() {
   if (text !== lastText) {
     lastText = text;
     $('fo-time').textContent = text;
+    $('fo-time').classList.toggle('is-long', text.length > 5);
     $('fo-pill-time').textContent = text;
     document.title = st.run ? `${text} · ${MODES[st.mode].label} — AIDEV` : baseTitle;
   }
@@ -263,8 +282,10 @@ function render() {
   knob.setAttribute('aria-valuemin', m.min);
   knob.setAttribute('aria-valuemax', m.max);
   knob.setAttribute('aria-valuenow', mins);
-  knob.setAttribute('aria-valuetext', `${mins} menit`);
+  knob.setAttribute('aria-valuetext', words(mins));
   knob.setAttribute('aria-disabled', String(!adjustable()));
+
+  renderLengths();
 
   document.querySelectorAll('[data-fo-mode]').forEach((b) => b.setAttribute('aria-pressed', String(b.dataset.foMode === st.mode)));
 
@@ -292,6 +313,27 @@ function render() {
   lastText = '';
   paint();
   renderPill();
+}
+
+/** Preset lengths + the minutes box for the current mode. */
+function renderLengths() {
+  const m = MODES[st.mode];
+  const mins = st.mins[st.mode];
+  const box = $('fo-presets');
+  if (box.dataset.mode !== st.mode) {
+    box.dataset.mode = st.mode;
+    box.innerHTML = m.presets.map((v) => `<button class="fo-preset" type="button" data-fo-min="${v}" aria-label="${words(v)}">${short(v)}</button>`).join('');
+  }
+  box.querySelectorAll('[data-fo-min]').forEach((b) => {
+    b.setAttribute('aria-pressed', String(Number(b.dataset.foMin) === mins));
+    b.disabled = !adjustable();
+  });
+  const input = $('fo-min');
+  input.min = m.min;
+  input.max = m.max;
+  input.disabled = !adjustable();
+  input.value = mins;
+  $('fo-min-hint').textContent = `${m.min}–${m.max}`;
 }
 
 function renderTasks() {
@@ -372,28 +414,34 @@ function setupDial() {
   const dial = $('fo-dial');
   const knob = $('fo-knob');
   let dragging = false;
-  let prev = 0;
+  let raw = 0;  // minutes the pointer has wound to, across turns
+  let last = 0; // pointer angle in minutes (0-60) at the previous event
+  /** Shortest way round from one angle to another, in minutes (-30 to 30). */
+  const turn = (from, to) => ((to - from + 90) % 60) - 30;
   dial.addEventListener('pointerdown', (e) => {
     if (!adjustable() || e.button !== 0) return;
     const r = dial.getBoundingClientRect();
     const dist = Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) / (r.width / 2);
-    if (dist < 0.45 && e.target !== knob) return; // the centre is for reading, not dragging
+    const onKnob = knob.contains(e.target);
+    if (dist < 0.45 && !onKnob) return; // the centre is for reading, not dragging
+    const cur = st.mins[st.mode];
+    last = angleMinutes(e);
+    // Grabbing the knob keeps the value; pressing the ring jumps there within the current hour.
+    raw = onKnob ? cur : Math.floor((cur - 1) / 60) * 60 + (last < 0.5 ? 60 : last);
     dragging = true;
-    prev = st.mins[st.mode];
     dial.setPointerCapture(e.pointerId);
     dial.classList.add('is-drag');
     knob.focus({ preventScroll: true });
-    move(e);
+    setMinutes(raw);
     e.preventDefault();
   });
   const move = (e) => {
     if (!dragging) return;
-    let v = Math.round(angleMinutes(e));
-    // Don't jump across 12 o'clock: past the top means max, before it means min.
-    if (prev > 45 && v < 15) v = 60;
-    else if (prev < 15 && v > 45) v = 0;
-    prev = v === 0 ? 0 : v;
-    setMinutes(v === 0 ? MODES[st.mode].min : v);
+    const m = MODES[st.mode];
+    const a = angleMinutes(e);
+    raw = clamp(raw + turn(last, a), m.min - 25, m.max + 25); // a little slack past both ends
+    last = a;
+    setMinutes(raw);
   };
   dial.addEventListener('pointermove', move);
   const end = () => { dragging = false; dial.classList.remove('is-drag'); };
@@ -406,7 +454,7 @@ function setupDial() {
     const step = e.shiftKey ? 5 : 1;
     const next = {
       ArrowUp: cur + step, ArrowRight: cur + step, ArrowDown: cur - step, ArrowLeft: cur - step,
-      PageUp: cur + 5, PageDown: cur - 5, Home: m.min, End: m.max,
+      PageUp: cur + 15, PageDown: cur - 15, Home: m.min, End: m.max,
     }[e.key];
     if (next === undefined) return;
     e.preventDefault();
@@ -422,9 +470,10 @@ export function initFocus(h) {
   setupDial();
 
   $('fokus').addEventListener('click', (e) => {
-    const b = e.target.closest('[data-fo-mode], [data-fo-action], #fo-toggle, #fo-reset, #fo-skip, #fo-notify');
+    const b = e.target.closest('[data-fo-mode], [data-fo-min], [data-fo-action], #fo-toggle, #fo-reset, #fo-skip, #fo-notify');
     if (!b) return;
     if (b.dataset.foMode) setMode(b.dataset.foMode);
+    else if (b.dataset.foMin) setMinutes(Number(b.dataset.foMin));
     else if (b.id === 'fo-toggle') (st.run ? pause : start)();
     else if (b.id === 'fo-reset') reset();
     else if (b.id === 'fo-skip') skip();
@@ -436,6 +485,14 @@ export function initFocus(h) {
       save();
       renderTasks();
     }
+  });
+  $('fo-min').addEventListener('change', (e) => {
+    const m = MODES[st.mode];
+    const v = Number(e.target.value);
+    const ok = e.target.value !== '' && Number.isFinite(v) && v >= m.min && v <= m.max;
+    setStatus(ok ? '' : `Isi antara ${m.min} dan ${m.max} menit.`);
+    if (e.target.value !== '' && Number.isFinite(v)) setMinutes(v);
+    e.target.value = st.mins[st.mode];
   });
   $('fo-task').addEventListener('change', (e) => { st.task = e.target.value; save(); });
   $('fo-auto').addEventListener('change', (e) => { st.auto = e.target.checked; save(); });
