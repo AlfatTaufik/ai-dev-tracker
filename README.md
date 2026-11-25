@@ -107,7 +107,8 @@ Section **Fokus** berisi timer berbentuk jam, satu putaran = 60 menit:
   satu jam, putar terus melewati angka 0. Fokus 5–240 menit, istirahat 1–30, istirahat panjang
   5–60. Bawaannya 25/5/15, dan istirahat panjang datang setelah 4 sesi fokus.
 - **Mulai / Jeda / Ulang**, dan **Selesai sekarang** (menit yang sudah berjalan tetap dicatat)
-  atau **Lewati istirahat**.
+  atau **Lewati istirahat**. Menekan **Ulang** atau pindah mode setelah fokus berjalan satu menit
+  atau lebih menanyakan dulu: catat, buang, atau batal.
 - Pilih tugas bulan ini di **Sedang dikerjakan**. Sesi fokus yang selesai masuk ke log
   belajar sebagai `Pomodoro · <tugas>`, lalu muncul tombol untuk menandai tugas itu selesai.
 - Saat sesi selesai: bunyi pendek, getar di HP, notifikasi (kalau diizinkan di Pengaturan

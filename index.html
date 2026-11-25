@@ -329,6 +329,14 @@
               <button class="btn btn-ghost btn-sm" id="fo-reset" type="button">Ulang</button>
               <button class="btn btn-ghost btn-sm" id="fo-skip" type="button">Selesai sekarang</button>
             </div>
+            <div class="confirm fo-confirm" id="fo-confirm" role="group" aria-labelledby="fo-confirm-text" hidden>
+              <p id="fo-confirm-text"><strong>Sesi fokus ini belum selesai.</strong> Catat menit yang sudah berjalan ke log, atau buang?</p>
+              <div class="confirm-actions">
+                <button class="btn btn-lime btn-sm" id="fo-keep" type="button" data-fo-action="confirm-keep">Catat</button>
+                <button class="btn btn-danger btn-sm" type="button" data-fo-action="confirm-drop">Buang</button>
+                <button class="btn btn-ghost btn-sm" type="button" data-fo-action="confirm-cancel">Batal</button>
+              </div>
+            </div>
             <p class="nn-hint mono fo-hint">Putar kenop untuk mengatur menit, satu putaran = 1 jam · sesi fokus yang selesai masuk ke log</p>
 
             <label class="field fo-task-field"><span>Sedang dikerjakan · <span id="fo-task-month"></span></span>

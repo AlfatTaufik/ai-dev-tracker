@@ -1107,6 +1107,7 @@ code { padding: 1px 6px; border-radius: 6px; background: var(--ink-3); color: va
 .fo-min-field .input { width: 76px; }
 .fo-min-field .input:disabled { opacity: .45; }
 .fo-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 12px; }
+.fo-confirm { border-color: var(--line-strong); background: var(--ink-2); }
 .fo-toggle { min-width: 180px; min-height: 64px; font-size: 19px; }
 .fo-toggle[aria-pressed="true"] { --b-bg: var(--fg); }
 .fo-hint { margin-top: -12px; }

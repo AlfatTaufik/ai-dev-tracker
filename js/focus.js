@@ -107,12 +107,6 @@ function reset() {
   render();
 }
 
-function setMode(mode) {
-  if (!(mode in MODES) || (mode === st.mode && !st.run && st.left === st.total)) return;
-  st.mode = mode;
-  reset();
-}
-
 function setMinutes(min) {
   if (!adjustable()) return;
   const m = MODES[st.mode];
@@ -124,10 +118,53 @@ function setMinutes(min) {
   render();
 }
 
+const elapsed = () => Math.floor((st.total - remaining()) / MIN);
+
 /** Skip ahead. In a focus session the minutes done so far are still logged. */
 function skip() {
-  const done = Math.floor((st.total - remaining()) / MIN);
-  finish({ natural: false, minutes: done });
+  finish({ natural: false, minutes: elapsed() });
+}
+
+// ---------- Confirm before throwing away focus minutes ----------
+let pending = null; // {mode, from}: the mode to go to, and the button that asked
+const atRisk = () => st.mode === 'focus' && !store.readOnly && elapsed() >= 1;
+
+/** Go to `mode` (the current one for "Ulang"), asking first when minutes would be lost. */
+function leave(mode, from) {
+  if (mode === st.mode && from.dataset.foMode) return; // pressing the active mode does nothing
+  if (!atRisk()) { closeConfirm(); goTo(mode); return; }
+  pending = { mode, from };
+  $('fo-confirm').hidden = false;
+  paintConfirm();
+  $('fo-keep').focus();
+}
+function goTo(mode) {
+  st.mode = mode;
+  reset();
+}
+/** focusBack: put focus on the button that asked (or Start, when that one is now disabled). */
+function closeConfirm(focusBack = false) {
+  if (!pending) return;
+  const { from } = pending;
+  pending = null;
+  $('fo-confirm').hidden = true;
+  if (focusBack) (from.disabled ? $('fo-toggle') : from).focus();
+}
+function answerConfirm(answer) {
+  if (!pending) return;
+  const { mode } = pending;
+  const min = elapsed();
+  let msg = '';
+  if (answer === 'keep') {
+    finish({ natural: false, minutes: min, quiet: true });
+    msg = `+${words(min)} fokus tercatat di log.`;
+  }
+  if (answer !== 'cancel') { goTo(mode); setStatus(msg || 'Sesi dibuang, tidak dicatat.'); }
+  closeConfirm(true);
+}
+function paintConfirm() {
+  const text = `Catat ${words(elapsed())}`;
+  if (pending && $('fo-keep').textContent !== text) $('fo-keep').textContent = text;
 }
 
 /**
@@ -135,7 +172,12 @@ function skip() {
  * natural: the countdown reached zero (chime, notification, auto start).
  * late: it reached zero while the page was closed.
  */
-function finish({ natural, minutes, late = false }) {
+function finish({ natural, minutes, late = false, quiet = false }) {
+  if (!quiet && pending) { // the session ended while the question was open
+    const inside = $('fo-confirm').contains(document.activeElement);
+    closeConfirm();
+    if (inside) $('fo-toggle').focus({ preventScroll: true });
+  }
   const was = st.mode;
   const endedAt = st.run ? Math.min(st.end, Date.now()) : Date.now();
   let msg = '';
@@ -179,7 +221,7 @@ function tick() {
   if (st.run && remaining() <= 0) {
     // Another tab may already have finished this session: trust what is saved.
     const saved = load();
-    if (saved.run !== st.run || saved.end !== st.end) { st = saved; render(); return; }
+    if (saved.run !== st.run || saved.end !== st.end) { st = saved; if (!atRisk()) closeConfirm(); render(); return; }
     finish({ natural: true });
     return;
   }
@@ -249,6 +291,7 @@ function build() {
 
 /** Cheap per-tick update: time, wedge, knob, title. */
 function paint() {
+  paintConfirm();
   const left = remaining();
   const text = clock(left);
   const full = Math.max(0, Math.ceil(left / TURN) - 1); // whole hours under the current turn
@@ -472,12 +515,13 @@ export function initFocus(h) {
   $('fokus').addEventListener('click', (e) => {
     const b = e.target.closest('[data-fo-mode], [data-fo-min], [data-fo-action], #fo-toggle, #fo-reset, #fo-skip, #fo-notify');
     if (!b) return;
-    if (b.dataset.foMode) setMode(b.dataset.foMode);
+    if (b.dataset.foMode) leave(b.dataset.foMode, b);
     else if (b.dataset.foMin) setMinutes(Number(b.dataset.foMin));
     else if (b.id === 'fo-toggle') (st.run ? pause : start)();
-    else if (b.id === 'fo-reset') reset();
+    else if (b.id === 'fo-reset') leave(st.mode, b);
     else if (b.id === 'fo-skip') skip();
     else if (b.id === 'fo-notify') Notification.requestPermission().then(renderNotifyBtn);
+    else if (b.dataset.foAction?.startsWith('confirm-')) answerConfirm(b.dataset.foAction.slice(8));
     else if (b.dataset.foAction === 'task-done' && st.task) {
       hooks.onTaskDone(st.task);
       setStatus('Tugas ditandai selesai. Pilih tugas berikutnya di atas.');
@@ -486,6 +530,7 @@ export function initFocus(h) {
       renderTasks();
     }
   });
+  $('fo-confirm').addEventListener('keydown', (e) => { if (e.key === 'Escape') { e.stopPropagation(); answerConfirm('cancel'); } });
   $('fo-min').addEventListener('change', (e) => {
     const m = MODES[st.mode];
     const v = Number(e.target.value);
@@ -502,7 +547,7 @@ export function initFocus(h) {
   new IntersectionObserver(([entry]) => { inView = entry.isIntersecting; renderPill(); }, { threshold: 0.15 }).observe($('fo-dial'));
 
   // Catch up after the page was closed, the device slept, or another tab changed the timer.
-  addEventListener('storage', (e) => { if (e.key === KEY) { st = load(); render(); } });
+  addEventListener('storage', (e) => { if (e.key === KEY) { st = load(); if (!atRisk()) closeConfirm(); render(); } });
   document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') tick(); });
   subscribe(() => { renderTasks(); renderToday(); });
 
